@@ -105,17 +105,25 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
               </button>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {filteredCrs.map(crs => (
-                <button
-                  key={crs.code}
-                  onClick={() => setDraftSettings(prev => ({ ...prev, projectCrs: crs.code, crsOverride: true, crsSearch: '' }))}
-                  className={`text-left p-3 rounded-xl border transition-all ${s.projectCrs === crs.code ? 'bg-primary/15 border-primary text-primary' : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/20'}`}
-                >
-                  <div className="text-[10px] font-bold font-mono">{crs.code}</div>
-                  <div className="text-[9px] opacity-80 truncate">{crs.name}</div>
-                </button>
-              ))}
+            <div className="mt-3 space-y-2">
+              <label className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">CRS list</label>
+              <select
+                value={s.projectCrs || 'EPSG:4326'}
+                onChange={(e) => setDraftSettings(prev => ({ ...prev, projectCrs: e.target.value, crsOverride: true, crsSearch: '' }))}
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-primary"
+              >
+                {filteredCrs.map(crs => (
+                  <option key={crs.code} value={crs.code} className="bg-[#0f172a] text-white">
+                    {crs.code} — {crs.name}
+                  </option>
+                ))}
+                {!filteredCrs.some(crs => crs.code === s.projectCrs) && (
+                  <option value={s.projectCrs} className="bg-[#0f172a] text-white">
+                    {s.projectCrs} — Custom / selected CRS
+                  </option>
+                )}
+              </select>
+              <p className="text-[9px] text-slate-600">Use the search field above to filter the dropdown or type an EPSG code and press Apply EPSG.</p>
             </div>
 
             <div className="mt-3 p-3 rounded-xl bg-black/20 border border-white/5">

@@ -763,33 +763,7 @@ export default function App() {
           />
         )}
 
-        {/* Persistent TOC sidebar: independent from bottom navigation */}
-        <button
-          onClick={openTocSidebar}
-          className={`fixed left-3 sm:left-5 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 z-[95] glass w-12 h-12 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center transition-all ${isTocSidebarOpen ? 'text-white bg-primary/30 border-primary/50' : 'text-primary hover:bg-primary/10'}`}
-          title={isTocSidebarOpen ? 'Close Table of Contents' : 'Open Table of Contents'}
-        >
-          {tocLayerIcon}
-        </button>
 
-        {isTocSidebarOpen && activeTab === 'explore' && (
-          <div className="fixed left-0 top-0 bottom-0 z-[85] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 pr-2 animate-in slide-in-from-left-4 fade-in duration-300">
-            <div className="relative h-full w-full">
-              <button
-                onClick={() => setIsTocSidebarOpen(false)}
-                className="absolute right-5 top-4 z-[90] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                title="Close Table of Contents"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-              <LayersView
-                layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
-                selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
-                toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
-              />
-            </div>
-          </div>
-        )}
 
         {activeTab === 'add-feature' && <AddDataMenu setActiveTab={setActiveTab} />}
 
@@ -953,6 +927,37 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Persistent TOC sidebar: independent from bottom navigation */}
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openTocSidebar(); }}
+        className={`fixed left-3 sm:left-5 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 z-[1000] pointer-events-auto glass w-12 h-12 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center transition-all ${isTocSidebarOpen ? 'text-white bg-primary/30 border-primary/50' : 'text-primary hover:bg-primary/10'}`}
+        aria-label={isTocSidebarOpen ? 'Close Table of Contents' : 'Open Table of Contents'}
+          title={isTocSidebarOpen ? 'Close Table of Contents' : 'Open Table of Contents'}
+      >
+        {tocLayerIcon}
+      </button>
+
+      {isTocSidebarOpen && activeTab === 'explore' && (
+        <div className="fixed left-0 top-0 bottom-0 z-[990] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 pr-2 animate-in slide-in-from-left-4 fade-in duration-300">
+          <div className="relative h-full w-full">
+            <button
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsTocSidebarOpen(false); }}
+              className="absolute right-5 top-4 z-[1001] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              title="Close Table of Contents"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <LayersView
+              layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
+              selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
+              toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
+            />
+          </div>
+        </div>
+      )}
 
       {showOnboarding && <OnboardingGuide onFinish={finishOnboarding} />}
 
