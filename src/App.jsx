@@ -20,7 +20,7 @@ import NewLayerView from './views/NewLayerView';
 import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
-import { formatProjectedCoordinate, measureProjectedDistance, measureProjectedArea, getCrsDefinition, transformGeometryToProjectCrs } from './utils/crs';
+import { formatProjectedCoordinate, measureProjectedDistance, measureProjectedArea, getCrsDefinition, transformGeometryToProjectCrs, unprojectToLonLat, makePrjText } from './utils/crs';
 import OnboardingGuide from './components/OnboardingGuide';
 
 // Resolve a feature's display color given its layer and symbology rules
@@ -273,6 +273,22 @@ export default function App() {
     setMeasureMode(false);
     setMeasureCoordinates([]);
   };
+
+  const goToProjectCoordinate = useCallback((x, y) => {
+    const nx = Number(x);
+    const ny = Number(y);
+    if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
+      alert('Coordinate non valide.');
+      return;
+    }
+    const crsDef = getCrsDefinition(settings);
+    const lonLat = crsDef.code === 'EPSG:4326' ? [nx, ny] : unprojectToLonLat([nx, ny], settings);
+    if (!Number.isFinite(lonLat?.[0]) || !Number.isFinite(lonLat?.[1])) {
+      alert('Impossibile trasformare queste coordinate nel CRS mappa.');
+      return;
+    }
+    map?.setView([lonLat[1], lonLat[0]], Math.max(map.getZoom?.() || 15, 15));
+  }, [map, settings]);
 
   // ── Map interaction ───────────────────────────────────────────────────────
   const handleAddNode = useCallback((latlng) => {
@@ -589,9 +605,22 @@ export default function App() {
     const layerName = layerIdFilter
       ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer')
       : 'all_layers';
-    a.download = `${layerName}_${(settings.crsCode || 'EPSG4326').replace(':','')}_${new Date().toISOString().split('T')[0]}.geojson`;
+    const safeCrs = crsDef.code.replace(':', '');
+    a.download = `${layerName}_${safeCrs}_${new Date().toISOString().split('T')[0]}.geojson`;
     a.click();
     URL.revokeObjectURL(url);
+
+    if (crsDef.transformable && crsDef.proj4) {
+      const prjBlob = new Blob([makePrjText(settings)], { type: 'text/plain' });
+      const prjUrl = URL.createObjectURL(prjBlob);
+      const prj = document.createElement('a');
+      prj.href = prjUrl;
+      prj.download = `${layerName}_${safeCrs}.prj`;
+      setTimeout(() => {
+        prj.click();
+        URL.revokeObjectURL(prjUrl);
+      }, 250);
+    }
   };
 
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -740,6 +769,7 @@ export default function App() {
             clearMeasure={clearMeasure}
             projectCoordinateText={gpsState.position ? formatProjectedCoordinate(gpsState.position, settings) : ''}
             projectCrsStatus={getCrsDefinition(settings)}
+            onGoToProjectCoordinate={goToProjectCoordinate}
           />
         )}
 

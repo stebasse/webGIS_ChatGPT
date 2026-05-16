@@ -15,9 +15,15 @@ export default function ExploreHUD({
   measureCoordinates,
   measureResult,
   toggleMeasureMode,
-  clearMeasure
+  clearMeasure,
+  projectCoordinateText,
+  projectCrsStatus,
+  onGoToProjectCoordinate
 }) {
   const [gridPosition, setGridPosition] = useState('center');
+  const [gotoOpen, setGotoOpen] = useState(false);
+  const [gotoX, setGotoX] = useState('');
+  const [gotoY, setGotoY] = useState('');
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -107,6 +113,18 @@ export default function ExploreHUD({
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
+        {/* Go to project CRS coordinate */}
+        <button
+          onClick={() => setGotoOpen(v => !v)}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${gotoOpen ? 'bg-cyan-400/20 border-cyan-400 text-cyan-300' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+          title="Go to CRS coordinate"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2v4m0 12v4m10-10h-4M6 12H2m15.07-7.07l-2.83 2.83M9.76 16.24l-2.83 2.83m12.14 0l-2.83-2.83M9.76 7.76L6.93 4.93" /></svg>
+          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Go To</span>
+        </button>
+
+        <div className="w-px h-3 bg-white/10 flex-shrink-0" />
+
         {/* Scale indicator - Fixed to Grid Size (128px) */}
         <div className="flex flex-col gap-0.5 flex-shrink-0 w-[128px]">
           <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
@@ -149,6 +167,20 @@ export default function ExploreHUD({
           </button>
         </div>
       </div>
+
+      {gotoOpen && (
+        <div className="absolute top-[calc(4.4rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass rounded-2xl border border-white/15 p-3 shadow-2xl w-[260px]">
+          <div className="text-[8px] font-bold text-cyan-300 uppercase tracking-widest mb-2">Go to coordinate · {projectCrsStatus?.code || 'EPSG:4326'}</div>
+          <div className="grid grid-cols-2 gap-2">
+            <input value={gotoX} onChange={e => setGotoX(e.target.value)} placeholder={projectCrsStatus?.code === 'EPSG:4326' ? 'Lon' : 'Easting'} className="bg-black/25 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary" />
+            <input value={gotoY} onChange={e => setGotoY(e.target.value)} placeholder={projectCrsStatus?.code === 'EPSG:4326' ? 'Lat' : 'Northing'} className="bg-black/25 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary" />
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={() => { setGotoX(''); setGotoY(''); }} className="px-3 py-2 rounded-lg bg-white/5 text-[9px] font-bold uppercase tracking-widest text-white/50">Clear</button>
+            <button onClick={() => onGoToProjectCoordinate?.(gotoX, gotoY)} className="px-3 py-2 rounded-lg bg-primary/25 text-[9px] font-bold uppercase tracking-widest text-primary">Go</button>
+          </div>
+        </div>
+      )}
 
       {/* ── Active layer indicator ───────────────────────────────────────── */}
       <div className="absolute top-[calc(5rem+env(safe-area-inset-top,0px))] sm:top-6 right-4 sm:right-6 pointer-events-auto">

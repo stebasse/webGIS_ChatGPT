@@ -1,111 +1,137 @@
-const WGS84_A = 6378137.0;
-const WGS84_F = 1 / 298.257223563;
-const GRS80_F = 1 / 298.257222101;
+import proj4 from 'proj4';
+
+export const WGS84 = 'EPSG:4326';
+export const WEB_MERCATOR = 'EPSG:3857';
+
+const FALLBACK_DEFS = {
+  'EPSG:4326': '+proj=longlat +datum=WGS84 +no_defs +type=crs',
+  'EPSG:3857': '+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs +type=crs',
+  'EPSG:3003': '+proj=tmerc +lat_0=0 +lon_0=9 +k=0.9996 +x_0=1500000 +y_0=0 +ellps=intl +units=m +no_defs +type=crs',
+  'EPSG:3004': '+proj=tmerc +lat_0=0 +lon_0=15 +k=0.9996 +x_0=2520000 +y_0=0 +ellps=intl +units=m +no_defs +type=crs',
+  'EPSG:6706': '+proj=longlat +ellps=GRS80 +no_defs +type=crs',
+  'EPSG:7791': '+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs +type=crs'
+};
 
 export function normalizeCrsCode(code) {
-  const raw = String(code || 'EPSG:4326').trim().toUpperCase();
+  const raw = String(code || WGS84).trim().toUpperCase();
   const digits = raw.replace('EPSG:', '').replace(/[^0-9]/g, '');
   return digits ? `EPSG:${digits}` : raw;
 }
 
+function epsgNumber(code) {
+  return Number(normalizeCrsCode(code).replace('EPSG:', ''));
+}
+
 function isFiniteCoord(coord) {
-  return Array.isArray(coord) && Number.isFinite(coord[0]) && Number.isFinite(coord[1]);
+  return Array.isArray(coord) && Number.isFinite(Number(coord[0])) && Number.isFinite(Number(coord[1]));
 }
 
-function lonLatToWebMercator([lon, lat]) {
-  const x = WGS84_A * lon * Math.PI / 180;
-  const safeLat = Math.max(Math.min(lat, 89.9999), -89.9999);
-  const y = WGS84_A * Math.log(Math.tan(Math.PI / 4 + safeLat * Math.PI / 360));
-  return [x, y];
+function utmDef(epsg) {
+  if (epsg >= 32601 && epsg <= 32660) return `+proj=utm +zone=${epsg - 32600} +datum=WGS84 +units=m +no_defs +type=crs`;
+  if (epsg >= 32701 && epsg <= 32760) return `+proj=utm +zone=${epsg - 32700} +south +datum=WGS84 +units=m +no_defs +type=crs`;
+  if (epsg >= 25801 && epsg <= 25860) return `+proj=utm +zone=${epsg - 25800} +ellps=GRS80 +units=m +no_defs +type=crs`;
+  return null;
 }
 
-function transverseMercator([lon, lat], { zone, south = false, lon0, k0 = 0.9996, x0 = 500000, y0 = 0, ellipsoid = 'WGS84' }) {
-  const f = ellipsoid === 'GRS80' ? GRS80_F : WGS84_F;
-  const a = WGS84_A;
-  const e2 = f * (2 - f);
-  const ep2 = e2 / (1 - e2);
-  const phi = lat * Math.PI / 180;
-  const lambda = lon * Math.PI / 180;
-  const lambda0 = ((lon0 ?? (zone * 6 - 183)) * Math.PI / 180);
+function unitsFromProj4(def) {
+  if (!def) return 'unknown';
+  if (def.includes('+proj=longlat')) return 'degrees';
+  const units = def.match(/\+units=([^\s]+)/)?.[1];
+  return units || 'm';
+}
 
-  const sinPhi = Math.sin(phi);
-  const cosPhi = Math.cos(phi);
-  const tanPhi = Math.tan(phi);
-  const N = a / Math.sqrt(1 - e2 * sinPhi * sinPhi);
-  const T = tanPhi * tanPhi;
-  const C = ep2 * cosPhi * cosPhi;
-  const A = cosPhi * (lambda - lambda0);
+function nameFromCode(code, fallbackName) {
+  const epsg = epsgNumber(code);
+  if (code === 'EPSG:4326') return fallbackName || 'WGS 84';
+  if (code === 'EPSG:3857') return fallbackName || 'WGS 84 / Pseudo-Mercator';
+  if (epsg >= 32601 && epsg <= 32660) return fallbackName || `WGS 84 / UTM zone ${epsg - 32600}N`;
+  if (epsg >= 32701 && epsg <= 32760) return fallbackName || `WGS 84 / UTM zone ${epsg - 32700}S`;
+  if (epsg >= 25801 && epsg <= 25860) return fallbackName || `ETRS89 / UTM zone ${epsg - 25800}N`;
+  if (code === 'EPSG:3003') return fallbackName || 'Monte Mario / Italy zone 1';
+  if (code === 'EPSG:3004') return fallbackName || 'Monte Mario / Italy zone 2';
+  if (code === 'EPSG:6706') return fallbackName || 'RDN2008 geographic';
+  if (code === 'EPSG:7791') return fallbackName || 'RDN2008 / UTM zone 32N';
+  return fallbackName || code;
+}
 
-  const e4 = e2 * e2;
-  const e6 = e4 * e2;
-  const M = a * (
-    (1 - e2 / 4 - 3 * e4 / 64 - 5 * e6 / 256) * phi
-    - (3 * e2 / 8 + 3 * e4 / 32 + 45 * e6 / 1024) * Math.sin(2 * phi)
-    + (15 * e4 / 256 + 45 * e6 / 1024) * Math.sin(4 * phi)
-    - (35 * e6 / 3072) * Math.sin(6 * phi)
-  );
+export function getProj4Definition(settingsOrCode = {}) {
+  const code = typeof settingsOrCode === 'string'
+    ? normalizeCrsCode(settingsOrCode)
+    : normalizeCrsCode(settingsOrCode?.crsCode);
 
-  const x = x0 + k0 * N * (
-    A + (1 - T + C) * Math.pow(A, 3) / 6
-    + (5 - 18 * T + T * T + 72 * C - 58 * ep2) * Math.pow(A, 5) / 120
-  );
+  const saved = typeof settingsOrCode === 'object' ? String(settingsOrCode?.crsProj4 || '').trim() : '';
+  if (saved && saved.startsWith('+proj=')) return saved;
+  return FALLBACK_DEFS[code] || utmDef(epsgNumber(code)) || null;
+}
 
-  let y = y0 + k0 * (
-    M + N * tanPhi * (
-      A * A / 2
-      + (5 - T + 9 * C + 4 * C * C) * Math.pow(A, 4) / 24
-      + (61 - 58 * T + T * T + 600 * C - 330 * ep2) * Math.pow(A, 6) / 720
-    )
-  );
-
-  if (south) y += 10000000;
-  return [x, y];
+export function registerCrs(settingsOrCode = {}) {
+  const code = typeof settingsOrCode === 'string'
+    ? normalizeCrsCode(settingsOrCode)
+    : normalizeCrsCode(settingsOrCode?.crsCode);
+  const def = getProj4Definition(settingsOrCode);
+  if (!def) return false;
+  try {
+    proj4.defs(code, def);
+    return true;
+  } catch (err) {
+    console.warn('Invalid proj4 CRS definition', code, err);
+    return false;
+  }
 }
 
 export function getCrsDefinition(settings = {}) {
-  const code = normalizeCrsCode(settings.crsCode);
-  const epsg = Number(code.replace('EPSG:', ''));
+  const code = normalizeCrsCode(settings.crsCode || WGS84);
+  const enabled = settings.crsOverride !== false;
+  const def = enabled ? getProj4Definition(settings) : FALLBACK_DEFS[WGS84];
+  const transformable = !!def && registerCrs({ ...settings, crsCode: code, crsProj4: def });
+  return {
+    code: enabled ? code : WGS84,
+    name: nameFromCode(enabled ? code : WGS84, settings.crsName),
+    proj4: def,
+    units: unitsFromProj4(def),
+    transformable,
+    source: settings.crsSource || (def ? 'proj4' : 'metadata'),
+    note: transformable ? 'CRS transformed with proj4.' : 'CRS stored as metadata only; proj4 definition missing.'
+  };
+}
 
-  if (!settings.crsOverride || code === 'EPSG:4326') {
-    return { code: 'EPSG:4326', name: settings.crsName || 'WGS 84', units: 'degrees', transformable: true, note: 'WGS84 lon/lat' };
+export function transformCoord(coord, source = WGS84, target = WGS84, settings = {}) {
+  if (!isFiniteCoord(coord)) return coord;
+  const src = normalizeCrsCode(source);
+  const dst = normalizeCrsCode(target);
+  if (src === dst) return [Number(coord[0]), Number(coord[1])];
+  const targetSettings = dst === normalizeCrsCode(settings?.crsCode) ? settings : { crsCode: dst, crsOverride: true };
+  const sourceSettings = src === normalizeCrsCode(settings?.crsCode) ? settings : { crsCode: src, crsOverride: true };
+  const okSrc = registerCrs(sourceSettings);
+  const okDst = registerCrs(targetSettings);
+  if (!okSrc || !okDst) return [Number(coord[0]), Number(coord[1])];
+  try {
+    const out = proj4(src, dst, [Number(coord[0]), Number(coord[1])]);
+    return coord.length > 2 ? [out[0], out[1], ...coord.slice(2)] : out;
+  } catch (err) {
+    console.warn('CRS transform failed', src, dst, err);
+    return [Number(coord[0]), Number(coord[1])];
   }
-  if (code === 'EPSG:3857') {
-    return { code, name: settings.crsName || 'WGS 84 / Pseudo-Mercator', units: 'm', transformable: true, type: 'mercator' };
-  }
-  if (epsg >= 32601 && epsg <= 32660) {
-    return { code, name: settings.crsName || `WGS 84 / UTM zone ${epsg - 32600}N`, units: 'm', transformable: true, type: 'utm', zone: epsg - 32600, south: false, ellipsoid: 'WGS84' };
-  }
-  if (epsg >= 32701 && epsg <= 32760) {
-    return { code, name: settings.crsName || `WGS 84 / UTM zone ${epsg - 32700}S`, units: 'm', transformable: true, type: 'utm', zone: epsg - 32700, south: true, ellipsoid: 'WGS84' };
-  }
-  if (epsg >= 25801 && epsg <= 25860) {
-    return { code, name: settings.crsName || `ETRS89 / UTM zone ${epsg - 25800}N`, units: 'm', transformable: true, type: 'utm', zone: epsg - 25800, south: false, ellipsoid: 'GRS80' };
-  }
-  if (code === 'EPSG:3003') {
-    return { code, name: settings.crsName || 'Monte Mario / Italy zone 1', units: 'm', transformable: true, type: 'tmerc', lon0: 9, k0: 0.9996, x0: 1500000, y0: 0, ellipsoid: 'WGS84', note: 'Approximate browser transform; no grid datum shift.' };
-  }
-  if (code === 'EPSG:3004') {
-    return { code, name: settings.crsName || 'Monte Mario / Italy zone 2', units: 'm', transformable: true, type: 'tmerc', lon0: 15, k0: 0.9996, x0: 2520000, y0: 0, ellipsoid: 'WGS84', note: 'Approximate browser transform; no grid datum shift.' };
-  }
-  return { code, name: settings.crsName || code, units: 'unknown', transformable: false, note: 'CRS stored as metadata; projection formula not bundled.' };
 }
 
 export function projectLonLat(coord, settings = {}) {
-  if (!isFiniteCoord(coord)) return coord;
   const def = getCrsDefinition(settings);
-  if (!def.transformable || def.code === 'EPSG:4326') return [...coord];
-  if (def.type === 'mercator') return lonLatToWebMercator(coord);
-  if (def.type === 'utm') return transverseMercator(coord, def);
-  if (def.type === 'tmerc') return transverseMercator(coord, def);
-  return [...coord];
+  if (!def.transformable || def.code === WGS84) return [...coord];
+  return transformCoord(coord, WGS84, def.code, settings);
+}
+
+export function unprojectToLonLat(coord, settings = {}) {
+  const def = getCrsDefinition(settings);
+  if (!def.transformable || def.code === WGS84) return [...coord];
+  return transformCoord(coord, def.code, WGS84, settings);
 }
 
 export function formatProjectedCoordinate(coord, settings = {}) {
   if (!isFiniteCoord(coord)) return '';
   const def = getCrsDefinition(settings);
+  if (!settings.crsOverride || def.code === WGS84) return `Lat ${Number(coord[1]).toFixed(6)}, Lon ${Number(coord[0]).toFixed(6)} · EPSG:4326`;
+  if (!def.transformable) return `Lat ${Number(coord[1]).toFixed(6)}, Lon ${Number(coord[0]).toFixed(6)} · ${def.code} metadata`;
   const [x, y] = projectLonLat(coord, settings);
-  if (def.code === 'EPSG:4326') return `Lat ${coord[1].toFixed(6)}, Lon ${coord[0].toFixed(6)} · ${def.code}`;
-  if (!def.transformable) return `Lat ${coord[1].toFixed(6)}, Lon ${coord[0].toFixed(6)} · ${def.code} metadata`;
   return `E ${x.toFixed(2)} · N ${y.toFixed(2)} · ${def.code}`;
 }
 
@@ -113,10 +139,7 @@ export function measureProjectedDistance(coords, settings = {}) {
   const def = getCrsDefinition(settings);
   if (!def.transformable || def.units !== 'm' || coords.length < 2) return null;
   const projected = coords.map(c => projectLonLat(c, settings));
-  return projected.slice(1).reduce((sum, c, i) => {
-    const prev = projected[i];
-    return sum + Math.hypot(c[0] - prev[0], c[1] - prev[1]);
-  }, 0);
+  return projected.slice(1).reduce((sum, c, i) => sum + Math.hypot(c[0] - projected[i][0], c[1] - projected[i][1]), 0);
 }
 
 export function measureProjectedArea(coords, settings = {}) {
@@ -132,13 +155,37 @@ export function measureProjectedArea(coords, settings = {}) {
   return Math.abs(area) / 2;
 }
 
+function mapCoords(value, fn) {
+  if (!Array.isArray(value)) return value;
+  if (Number.isFinite(Number(value[0])) && Number.isFinite(Number(value[1]))) return fn(value);
+  return value.map(v => mapCoords(v, fn));
+}
+
+export function transformGeometry(geometry, sourceCrs = WGS84, targetCrs = WGS84, settings = {}) {
+  if (!geometry?.coordinates) return geometry;
+  const src = normalizeCrsCode(sourceCrs);
+  const dst = normalizeCrsCode(targetCrs);
+  if (src === dst) return geometry;
+  return { ...geometry, coordinates: mapCoords(geometry.coordinates, c => transformCoord(c, src, dst, settings)) };
+}
+
 export function transformGeometryToProjectCrs(geometry, settings = {}) {
   const def = getCrsDefinition(settings);
-  if (!geometry || !def.transformable || def.code === 'EPSG:4326') return geometry;
-  const transformCoord = c => {
-    const [x, y] = projectLonLat([c[0], c[1]], settings);
-    return c.length > 2 ? [x, y, ...c.slice(2)] : [x, y];
+  if (!geometry || !def.transformable || def.code === WGS84) return geometry;
+  return transformGeometry(geometry, WGS84, def.code, settings);
+}
+
+export function projectFeatureForExport(feature, settings = {}) {
+  const def = getCrsDefinition(settings);
+  if (!def.transformable || def.code === WGS84 || !feature?.geometry) return feature;
+  return {
+    ...feature,
+    properties: { ...feature.properties, projectCrs: def.code, originalCrs: feature.properties?.crs || WGS84 },
+    geometry: transformGeometryToProjectCrs(feature.geometry, settings)
   };
-  const transformNested = value => Array.isArray(value?.[0]) ? value.map(transformNested) : transformCoord(value);
-  return { ...geometry, coordinates: transformNested(geometry.coordinates) };
+}
+
+export function makePrjText(settings = {}) {
+  const def = getCrsDefinition(settings);
+  return def.proj4 || def.code;
 }
