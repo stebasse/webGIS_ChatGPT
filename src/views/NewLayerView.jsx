@@ -65,6 +65,8 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       colorHex: '#10b981',
       active: true,
       fields: fields.filter(f => f.name.trim()),
+      crs: 'EPSG:4326',
+      sourceCrs: 'EPSG:4326',
       format,
       formatExt: selectedFormat?.ext || '.geojson',
       dirHandle: null,       // cannot persist FileSystemDirectoryHandle in localStorage

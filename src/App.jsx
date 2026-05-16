@@ -21,6 +21,7 @@ import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
 import OnboardingGuide from './components/OnboardingGuide';
+import { transformCoord, transformFeature, formatCoordinate, distanceInCrs, areaInCrs, getCrsInfo } from './services/crsService';
 
 // Resolve a feature's display color given its layer and symbology rules
 function resolveFeatureColor(feature, layer) {
@@ -34,7 +35,7 @@ function resolveFeatureColor(feature, layer) {
 }
 
 const DEFAULT_SETTINGS = {
-  theme: 'dark', units: 'metric', crsOverride: false,
+  theme: 'dark', units: 'metric', crsOverride: false, projectCrs: 'EPSG:4326',
   gpu: true, logLevel: 'low', compassMode: false
 };
 
@@ -42,7 +43,7 @@ const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
-  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(true);
+  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [activeBasemap, setActiveBasemap] = useState('carto_dark');
 
@@ -59,10 +60,6 @@ export default function App() {
     }
   }, [layers, selectedLayerId, setSelectedLayerId]);
 
-  // Apply theme class to <html>
-  useEffect(() => {
-    document.documentElement.classList.toggle('light-theme', settings.theme === 'light');
-  }, [settings.theme]);
 
   // Log verbosity
   useEffect(() => {
@@ -87,6 +84,17 @@ export default function App() {
   const [newPopupField, setNewPopupField] = useState({ name: '', type: 'String' });
   const [measureMode, setMeasureMode] = useState(false); // false | 'Distance' | 'Area'
   const [measureCoordinates, setMeasureCoordinates] = useState([]);
+
+  // Apply theme class to <html>; preview draft theme immediately while Settings is open.
+  useEffect(() => {
+    const activeTheme = activeTab === 'settings' ? draftSettings.theme : settings.theme;
+    document.documentElement.classList.toggle('light-theme', activeTheme === 'light');
+  }, [settings.theme, draftSettings.theme, activeTab]);
+
+  useEffect(() => {
+    setDraftSettings(settings);
+  }, [settings]);
+
   const [showOnboarding, setShowOnboarding] = useState(() => {
     try {
       return localStorage.getItem('webgis_onboarding_completed') !== 'true';
@@ -116,6 +124,25 @@ export default function App() {
   }, []);
 
   const deviceHeading = useDeviceCompass();
+  const projectCrs = settings.crsOverride ? (settings.projectCrs || 'EPSG:4326') : 'EPSG:4326';
+  const projectCrsInfo = getCrsInfo(projectCrs);
+
+  useEffect(() => {
+    if (activeTab !== 'explore') setIsTocSidebarOpen(false);
+  }, [activeTab]);
+
+  const openTocSidebar = () => {
+    setActiveTab('explore');
+    setIsTocSidebarOpen(prev => !prev);
+  };
+
+  const tocLayerIcon = (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3L3 7.5L12 12L21 7.5L12 3Z"/>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12L12 16.5L21 12"/>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5L12 21L21 16.5"/>
+    </svg>
+  );
 
   const toggleLayer = (id) => {
     setLayers(prev => prev.map(l => l.id === id ? { ...l, active: !l.active } : l));
@@ -217,10 +244,16 @@ export default function App() {
     return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
   };
 
-  const measureDistanceMeters = (coords) => coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
+  const measureDistanceMeters = (coords) => {
+    const projected = settings.crsOverride ? distanceInCrs(coords, projectCrs) : null;
+    if (typeof projected === 'number') return projected;
+    return coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
+  };
 
   const measureAreaSqMeters = (coords) => {
     if (coords.length < 3) return 0;
+    const projectedArea = settings.crsOverride ? areaInCrs(coords, projectCrs) : null;
+    if (typeof projectedArea === 'number') return projectedArea;
     const R = 6371008.8;
     const lat0 = toRad(coords.reduce((sum, c) => sum + c[1], 0) / coords.length);
     const projected = coords.map(([lng, lat]) => [R * toRad(lng) * Math.cos(lat0), R * toRad(lat)]);
@@ -495,8 +528,9 @@ export default function App() {
     }
     const activeLayer = layers.find(l => l.id === selectedLayerId);
     if (!activeLayer) {
-      alert('Nessun layer selezionato. Vai in Layers e seleziona un layer.');
-      setActiveTab('layers');
+      alert('Nessun layer selezionato. Apri la TOC e seleziona un layer.');
+      setActiveTab('explore');
+      setIsTocSidebarOpen(true);
       return;
     }
     const geomType = activeLayer.type; // e.g. "Vector - Point", "Vector - Table"
@@ -557,7 +591,16 @@ export default function App() {
       alert('Nessuna feature da esportare.');
       return;
     }
-    const geojson = { type: 'FeatureCollection', features };
+    const exportCrs = settings.crsOverride ? projectCrs : 'EPSG:4326';
+    const exportFeatures = exportCrs === 'EPSG:4326'
+      ? features
+      : features.map(f => transformFeature(f, 'EPSG:4326', exportCrs));
+    const geojson = {
+      type: 'FeatureCollection',
+      name: layerIdFilter ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer') : 'all_layers',
+      crs: { type: 'name', properties: { name: exportCrs } },
+      features: exportFeatures
+    };
     const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -565,7 +608,7 @@ export default function App() {
     const layerName = layerIdFilter
       ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer')
       : 'all_layers';
-    a.download = `${layerName}_${new Date().toISOString().split('T')[0]}.geojson`;
+    a.download = `${layerName}_${exportCrs.replace(':','')}_${new Date().toISOString().split('T')[0]}.geojson`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -714,35 +757,37 @@ export default function App() {
             measureResult={formatMeasureValue(measureMode, measureCoordinates)}
             toggleMeasureMode={toggleMeasureMode}
             clearMeasure={clearMeasure}
+            gpsCoordinateLabel={gpsState.position ? formatCoordinate(transformCoord(gpsState.position, 'EPSG:4326', projectCrs), projectCrs) : ''}
+            projectCrs={projectCrs}
+            projectCrsInfo={projectCrsInfo}
           />
         )}
 
-        {activeTab === 'layers' && (
-          <div className={`fixed left-0 top-0 bottom-0 z-[80] pointer-events-auto transition-all duration-300 ease-out ${isTocSidebarOpen ? 'w-[min(94vw,440px)]' : 'w-16'} p-3 sm:p-4`}>
-            {!isTocSidebarOpen ? (
+        {/* Persistent TOC sidebar: independent from bottom navigation */}
+        <button
+          onClick={openTocSidebar}
+          className={`fixed left-3 sm:left-5 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 z-[95] glass w-12 h-12 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center transition-all ${isTocSidebarOpen ? 'text-white bg-primary/30 border-primary/50' : 'text-primary hover:bg-primary/10'}`}
+          title={isTocSidebarOpen ? 'Close Table of Contents' : 'Open Table of Contents'}
+        >
+          {tocLayerIcon}
+        </button>
+
+        {isTocSidebarOpen && activeTab === 'explore' && (
+          <div className="fixed left-0 top-0 bottom-0 z-[85] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 pr-2 animate-in slide-in-from-left-4 fade-in duration-300">
+            <div className="relative h-full w-full">
               <button
-                onClick={() => setIsTocSidebarOpen(true)}
-                className="glass w-11 h-11 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center text-primary hover:bg-primary/10 transition-all"
-                title="Open Table of Contents"
+                onClick={() => setIsTocSidebarOpen(false)}
+                className="absolute right-5 top-4 z-[90] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                title="Close Table of Contents"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h10" /></svg>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
-            ) : (
-              <div className="relative h-full w-full animate-in slide-in-from-left-4 fade-in duration-300">
-                <button
-                  onClick={() => setIsTocSidebarOpen(false)}
-                  className="absolute right-4 top-3 z-[90] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
-                  title="Close Table of Contents"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                </button>
-                <LayersView
-                  layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
-                  selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
-                  toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
-                />
-              </div>
-            )}
+              <LayersView
+                layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
+                selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
+                toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
+              />
+            </div>
           </div>
         )}
 
