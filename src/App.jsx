@@ -45,7 +45,7 @@ const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
-  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(true);
+  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [activeBasemap, setActiveBasemap] = useState('carto_dark');
 
@@ -71,6 +71,14 @@ export default function App() {
   useEffect(() => {
     window.__GIS_DEBUG__ = settings.logLevel === 'high';
   }, [settings.logLevel]);
+
+  // TOC and app panels are mutually exclusive.
+  // Opening another menu closes the TOC; opening the TOC returns to Explore.
+  useEffect(() => {
+    if (activeTab !== 'explore' && isTocSidebarOpen) {
+      setIsTocSidebarOpen(false);
+    }
+  }, [activeTab, isTocSidebarOpen]);
 
   const [draftSettings, setDraftSettings] = useState(settings);
   const [gpsState, setGpsState] = useState({ position: null, accuracy: null, tracking: false });
@@ -758,8 +766,14 @@ export default function App() {
 
         {/* TOC SIDEBAR - always available from the bottom-left corner */}
         <button
-          onClick={() => setIsTocSidebarOpen(prev => !prev)}
-          className={`fixed left-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-8 z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20' : 'border-white/20 text-primary hover:bg-primary/10'}`}
+          onClick={() => {
+            setIsTocSidebarOpen(prev => {
+              const next = !prev;
+              if (next) setActiveTab('explore');
+              return next;
+            });
+          }}
+          className={`fixed left-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20' : 'border-white/20 text-primary hover:bg-primary/10'}`}
           title={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
           aria-label={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
         >

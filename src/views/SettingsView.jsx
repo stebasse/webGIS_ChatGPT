@@ -69,7 +69,7 @@ function makeMetadataOnlyCrs(value) {
   const code = normalizeEpsg(value) || 'EPSG:4326';
   return {
     code,
-    name: 'EPSG metadata only / online definition not loaded',
+    name: `EPSG ${code.replace('EPSG:', '')} / metadata only`,
     proj4: 'Definition not bundled. Stored as CRS metadata only.',
     source: 'manual'
   };
@@ -133,7 +133,18 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
     return FALLBACK_CRS_OPTIONS.filter(crs => crs.code.toLowerCase().includes(q) || crs.name.toLowerCase().includes(q));
   }, [s.crsSearch]);
 
-  const dropdownOptions = crsResults.length > 0 ? crsResults : filteredFallbackOptions;
+  const typedMetadataCrs = useMemo(() => {
+    const q = String(s.crsSearch || '').trim();
+    if (!q) return null;
+    const normalized = normalizeEpsg(q);
+    return normalized.startsWith('EPSG:') ? makeMetadataOnlyCrs(normalized) : null;
+  }, [s.crsSearch]);
+
+  const dropdownOptions = useMemo(() => {
+    const base = crsResults.length > 0 ? crsResults : filteredFallbackOptions;
+    if (!typedMetadataCrs) return base;
+    return base.some(c => c.code === typedMetadataCrs.code) ? base : [typedMetadataCrs, ...base];
+  }, [crsResults, filteredFallbackOptions, typedMetadataCrs]);
 
   const setCrs = (crsOrValue) => {
     const crs = typeof crsOrValue === 'object' ? crsOrValue : ([...crsResults, ...FALLBACK_CRS_OPTIONS].find(c => c.code === normalizeEpsg(crsOrValue)) || makeMetadataOnlyCrs(crsOrValue));
@@ -155,16 +166,28 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
       setCrsError('');
       return;
     }
+
+    const typed = normalizeEpsg(q);
+    const typedCrs = typed.startsWith('EPSG:') ? makeMetadataOnlyCrs(typed) : null;
     const controller = new AbortController();
     setCrsLoading(true);
     setCrsError('');
+
     try {
       const results = await searchEpsgRegistry(q, controller.signal);
-      setCrsResults(results);
-      if (results.length === 0) setCrsError('Nessun CRS trovato nel registro online. Puoi comunque applicare il codice come metadata.');
+      const merged = typedCrs && !results.some(r => r.code === typedCrs.code) ? [typedCrs, ...results] : results;
+      setCrsResults(merged);
+      if (typedCrs) setCrs(merged.find(r => r.code === typedCrs.code) || typedCrs);
+      if (merged.length === 0) setCrsError('Nessun CRS trovato. Puoi comunque digitare EPSG:xxxx e applicarlo come metadata.');
     } catch (err) {
-      setCrsResults([]);
-      setCrsError('Ricerca online non disponibile. Uso lista locale ridotta o metadata EPSG manuale.');
+      if (typedCrs) {
+        setCrsResults([typedCrs]);
+        setCrs(typedCrs);
+        setCrsError('Registro online non disponibile. EPSG applicato come metadata manuale.');
+      } else {
+        setCrsResults([]);
+        setCrsError('Ricerca online non disponibile. Usa un codice EPSG o la lista locale.');
+      }
     } finally {
       setCrsLoading(false);
     }
@@ -183,12 +206,17 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
       setCrsError('');
       try {
         const results = await searchEpsgRegistry(q, controller.signal);
-        setCrsResults(results);
-        if (results.length === 0) setCrsError('Nessun CRS trovato nel registro online.');
+        const typed = normalizeEpsg(q);
+        const typedCrs = typed.startsWith('EPSG:') ? makeMetadataOnlyCrs(typed) : null;
+        const merged = typedCrs && !results.some(r => r.code === typedCrs.code) ? [typedCrs, ...results] : results;
+        setCrsResults(merged);
+        if (merged.length === 0) setCrsError('Nessun CRS trovato nel registro online.');
       } catch (err) {
         if (err.name !== 'AbortError') {
-          setCrsResults([]);
-          setCrsError('Ricerca online non disponibile. Uso fallback locale.');
+          const typed = normalizeEpsg(q);
+          const typedCrs = typed.startsWith('EPSG:') ? makeMetadataOnlyCrs(typed) : null;
+          setCrsResults(typedCrs ? [typedCrs] : []);
+          setCrsError(typedCrs ? 'Ricerca online non disponibile: EPSG disponibile come metadata manuale.' : 'Ricerca online non disponibile. Uso fallback locale.');
         }
       } finally {
         setCrsLoading(false);
@@ -270,7 +298,7 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
                     onClick={() => setCrs(s.crsSearch || activeCrs.code)}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
                   >
-                    Apply typed EPSG
+                    Apply / Select typed EPSG
                   </button>
                   <button
                     onClick={() => { setCrsResults([]); set('crsSearch', ''); setCrs(FALLBACK_CRS_OPTIONS[0]); }}
