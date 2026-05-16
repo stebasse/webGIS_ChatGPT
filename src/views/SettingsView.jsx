@@ -39,7 +39,7 @@ function SegmentControl({ value, onChange, options }) {
   );
 }
 
-export default function SettingsView({ draftSettings, setDraftSettings, saveSettings }) {
+export default function SettingsView({ draftSettings, setDraftSettings, saveSettings, showTutorialAgain }) {
   const s = draftSettings;
   const set = (key, val) => setDraftSettings(prev => ({ ...prev, [key]: val }));
 
@@ -150,6 +150,24 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
               </div>
             </div>
           </section>
+
+          {/* ── Help ── */}
+          <section>
+            <SectionHeader icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.194-.925 2.226-2.263 2.708-.688.248-1.237.826-1.237 1.558V15m-.5 4h.01" />} title="Help" />
+            <div className="p-5 rounded-2xl bg-white/5 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold text-white uppercase">Quick Guide</p>
+                <p className="text-[10px] text-slate-500 mt-1">Show the first-launch tutorial again.</p>
+              </div>
+              <button
+                onClick={showTutorialAgain}
+                className="px-5 py-3 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+              >
+                Show Tutorial Again
+              </button>
+            </div>
+          </section>
+
         </div>
 
         {/* Footer */}

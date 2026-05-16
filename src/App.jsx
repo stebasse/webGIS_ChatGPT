@@ -20,6 +20,7 @@ import NewLayerView from './views/NewLayerView';
 import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
+import OnboardingGuide from './components/OnboardingGuide';
 
 // Resolve a feature's display color given its layer and symbology rules
 function resolveFeatureColor(feature, layer) {
@@ -85,6 +86,33 @@ export default function App() {
   const [newPopupField, setNewPopupField] = useState({ name: '', type: 'String' });
   const [measureMode, setMeasureMode] = useState(false); // false | 'Distance' | 'Area'
   const [measureCoordinates, setMeasureCoordinates] = useState([]);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return localStorage.getItem('webgis_onboarding_completed') !== 'true';
+    } catch {
+      return true;
+    }
+  });
+
+
+  const finishOnboarding = useCallback(() => {
+    try {
+      localStorage.setItem('webgis_onboarding_completed', 'true');
+    } catch {
+      // localStorage may be unavailable in private mode; still close the guide for this session.
+    }
+    setShowOnboarding(false);
+  }, []);
+
+  const showTutorialAgain = useCallback(() => {
+    try {
+      localStorage.removeItem('webgis_onboarding_completed');
+    } catch {
+      // Ignore storage errors and reopen in the current session.
+    }
+    setShowOnboarding(true);
+    setActiveTab('explore');
+  }, []);
 
   const deviceHeading = useDeviceCompass();
 
@@ -726,6 +754,7 @@ export default function App() {
           <SettingsView
             draftSettings={draftSettings} setDraftSettings={setDraftSettings}
             saveSettings={saveSettings}
+            showTutorialAgain={showTutorialAgain}
           />
         )}
 
@@ -857,6 +886,8 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {showOnboarding && <OnboardingGuide onFinish={finishOnboarding} />}
 
       {/* BOTTOM NAVIGATION */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onAddFeature={collectPoint} />

@@ -10,12 +10,7 @@ export default function ExploreHUD({
   onAddFeature,
   layers, selectedLayerId, units,
   map,
-  isFreehandMode, setIsFreehandMode,
-  measureMode,
-  measureCoordinates,
-  measureResult,
-  toggleMeasureMode,
-  clearMeasure
+  isFreehandMode, setIsFreehandMode
 }) {
   const [gridPosition, setGridPosition] = useState('center');
 
