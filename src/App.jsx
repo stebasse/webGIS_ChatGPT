@@ -671,6 +671,10 @@ export default function App() {
             const eventHandlers = {
               click: (e) => {
                 L.DomEvent.stopPropagation(e);
+                if (measureMode) {
+                  handleMapClick(e);
+                  return;
+                }
                 setPopupFeature({ feature, layer });
               }
             };
