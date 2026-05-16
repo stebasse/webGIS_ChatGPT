@@ -16,9 +16,7 @@
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-leaflet": "^5.0.0",
-    "tailwindcss": "^4.3.0",
-    "proj4": "^2.15.0",
-    "proj4leaflet": "^1.0.2"
+    "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

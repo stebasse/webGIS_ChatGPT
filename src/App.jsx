@@ -20,7 +20,6 @@ import NewLayerView from './views/NewLayerView';
 import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
-import { formatProjectedCoordinate, measureProjectedDistance, measureProjectedArea, getCrsDefinition, transformGeometryToProjectCrs, unprojectToLonLat, makePrjText } from './utils/crs';
 import OnboardingGuide from './components/OnboardingGuide';
 
 // Resolve a feature's display color given its layer and symbology rules
@@ -36,9 +35,6 @@ function resolveFeatureColor(feature, layer) {
 
 const DEFAULT_SETTINGS = {
   theme: 'dark', units: 'metric', crsOverride: false,
-  crsCode: 'EPSG:4326',
-  crsName: 'WGS 84',
-  crsProj4: '+proj=longlat +datum=WGS84 +no_defs',
   gpu: true, logLevel: 'low', compassMode: false
 };
 
@@ -46,7 +42,7 @@ const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
-  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(false);
+  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [activeBasemap, setActiveBasemap] = useState('carto_dark');
 
@@ -63,13 +59,10 @@ export default function App() {
     }
   }, [layers, selectedLayerId, setSelectedLayerId]);
 
-  // Apply theme class to the whole document. In Settings, preview draft theme immediately; Save persists it.
+  // Apply theme class to <html>
   useEffect(() => {
-    const light = effectiveTheme === 'light';
-    document.documentElement.classList.toggle('light-theme', light);
-    document.body.classList.toggle('light-theme', light);
-    document.documentElement.dataset.theme = light ? 'light' : 'dark';
-  }, [effectiveTheme]);
+    document.documentElement.classList.toggle('light-theme', settings.theme === 'light');
+  }, [settings.theme]);
 
   // Log verbosity
   useEffect(() => {
@@ -77,12 +70,6 @@ export default function App() {
   }, [settings.logLevel]);
 
   const [draftSettings, setDraftSettings] = useState(settings);
-  const effectiveTheme = activeTab === 'settings' ? (draftSettings.theme || settings.theme) : (settings.theme || 'dark');
-  const isLightTheme = effectiveTheme === 'light';
-
-  useEffect(() => {
-    setDraftSettings(settings);
-  }, [settings]);
   const [gpsState, setGpsState] = useState({ position: null, accuracy: null, tracking: false });
   const [mapBearing, setMapBearing] = useState(0);
   const [gridScaleMeters, setGridScaleMeters] = useState(100);
@@ -230,16 +217,10 @@ export default function App() {
     return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
   };
 
-  const measureDistanceMeters = (coords) => {
-    const projected = measureProjectedDistance(coords, settings);
-    if (projected !== null) return projected;
-    return coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
-  };
+  const measureDistanceMeters = (coords) => coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
 
   const measureAreaSqMeters = (coords) => {
     if (coords.length < 3) return 0;
-    const projectedArea = measureProjectedArea(coords, settings);
-    if (projectedArea !== null) return projectedArea;
     const R = 6371008.8;
     const lat0 = toRad(coords.reduce((sum, c) => sum + c[1], 0) / coords.length);
     const projected = coords.map(([lng, lat]) => [R * toRad(lng) * Math.cos(lat0), R * toRad(lat)]);
@@ -282,22 +263,6 @@ export default function App() {
     setMeasureMode(false);
     setMeasureCoordinates([]);
   };
-
-  const goToProjectCoordinate = useCallback((x, y) => {
-    const nx = Number(x);
-    const ny = Number(y);
-    if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
-      alert('Coordinate non valide.');
-      return;
-    }
-    const crsDef = getCrsDefinition(settings);
-    const lonLat = crsDef.code === 'EPSG:4326' ? [nx, ny] : unprojectToLonLat([nx, ny], settings);
-    if (!Number.isFinite(lonLat?.[0]) || !Number.isFinite(lonLat?.[1])) {
-      alert('Impossibile trasformare queste coordinate nel CRS mappa.');
-      return;
-    }
-    map?.setView([lonLat[1], lonLat[0]], Math.max(map.getZoom?.() || 15, 15));
-  }, [map, settings]);
 
   // ── Map interaction ───────────────────────────────────────────────────────
   const handleAddNode = useCallback((latlng) => {
@@ -530,9 +495,8 @@ export default function App() {
     }
     const activeLayer = layers.find(l => l.id === selectedLayerId);
     if (!activeLayer) {
-      alert('Nessun layer selezionato. Apri la TOC e seleziona un layer.');
-      setIsTocSidebarOpen(true);
-      setActiveTab('explore');
+      alert('Nessun layer selezionato. Vai in Layers e seleziona un layer.');
+      setActiveTab('layers');
       return;
     }
     const geomType = activeLayer.type; // e.g. "Vector - Point", "Vector - Table"
@@ -593,20 +557,7 @@ export default function App() {
       alert('Nessuna feature da esportare.');
       return;
     }
-    const crsDef = getCrsDefinition(settings);
-    const exportFeatures = crsDef.transformable && crsDef.code !== 'EPSG:4326'
-      ? features.map(f => ({
-          ...f,
-          properties: { ...f.properties, projectCrs: crsDef.code, originalCrs: f.properties?.crs || 'EPSG:4326' },
-          geometry: transformGeometryToProjectCrs(f.geometry, settings)
-        }))
-      : features;
-    const geojson = {
-      type: 'FeatureCollection',
-      name: layerIdFilter ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer') : 'all_layers',
-      crs: { type: 'name', properties: { name: crsDef.code, note: crsDef.transformable ? 'Coordinates exported in selected project CRS.' : 'CRS metadata only; coordinates remain WGS84 lon/lat.' } },
-      features: exportFeatures
-    };
+    const geojson = { type: 'FeatureCollection', features };
     const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -614,22 +565,9 @@ export default function App() {
     const layerName = layerIdFilter
       ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer')
       : 'all_layers';
-    const safeCrs = crsDef.code.replace(':', '');
-    a.download = `${layerName}_${safeCrs}_${new Date().toISOString().split('T')[0]}.geojson`;
+    a.download = `${layerName}_${new Date().toISOString().split('T')[0]}.geojson`;
     a.click();
     URL.revokeObjectURL(url);
-
-    if (crsDef.transformable && crsDef.proj4) {
-      const prjBlob = new Blob([makePrjText(settings)], { type: 'text/plain' });
-      const prjUrl = URL.createObjectURL(prjBlob);
-      const prj = document.createElement('a');
-      prj.href = prjUrl;
-      prj.download = `${layerName}_${safeCrs}.prj`;
-      setTimeout(() => {
-        prj.click();
-        URL.revokeObjectURL(prjUrl);
-      }, 250);
-    }
   };
 
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -650,7 +588,7 @@ export default function App() {
   const gpsIcon = createGpsIcon(deviceHeading || 0);
 
   return (
-    <div className={`relative h-[100dvh] w-full overflow-hidden font-sans select-none flex flex-col transition-colors duration-300 ${isLightTheme ? 'bg-slate-100 text-slate-900' : 'bg-[#0f172a] text-slate-100'}`}>
+    <div className="relative h-[100dvh] w-full overflow-hidden bg-[#0f172a] font-sans select-none text-slate-100 flex flex-col">
 
       {/* PERSISTENT MAP BACKGROUND */}
       <div className={`absolute inset-0 transition-all duration-700 z-0 ${activeTab !== 'explore' ? 'blur-md scale-105 opacity-40 pointer-events-none' : 'opacity-100'}`}>
@@ -661,7 +599,7 @@ export default function App() {
           rotate={true}
           rotateControl={false}
           touchRotate={true}
-          style={{ width: '100%', height: '100%', background: isLightTheme ? '#f8fafc' : '#0f172a' }}
+          style={{ width: '100%', height: '100%', background: '#0f172a' }}
         >
           <TileLayer
             attribution={BASEMAPS[activeBasemap].attr}
@@ -776,10 +714,36 @@ export default function App() {
             measureResult={formatMeasureValue(measureMode, measureCoordinates)}
             toggleMeasureMode={toggleMeasureMode}
             clearMeasure={clearMeasure}
-            projectCoordinateText={gpsState.position ? formatProjectedCoordinate(gpsState.position, settings) : ''}
-            projectCrsStatus={getCrsDefinition(settings)}
-            onGoToProjectCoordinate={goToProjectCoordinate}
           />
+        )}
+
+        {activeTab === 'layers' && (
+          <div className={`fixed left-0 top-0 bottom-0 z-[80] pointer-events-auto transition-all duration-300 ease-out ${isTocSidebarOpen ? 'w-[min(94vw,440px)]' : 'w-16'} p-3 sm:p-4`}>
+            {!isTocSidebarOpen ? (
+              <button
+                onClick={() => setIsTocSidebarOpen(true)}
+                className="glass w-11 h-11 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center text-primary hover:bg-primary/10 transition-all"
+                title="Open Table of Contents"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h10" /></svg>
+              </button>
+            ) : (
+              <div className="relative h-full w-full animate-in slide-in-from-left-4 fade-in duration-300">
+                <button
+                  onClick={() => setIsTocSidebarOpen(false)}
+                  className="absolute right-4 top-3 z-[90] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                  title="Close Table of Contents"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <LayersView
+                  layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
+                  selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
+                  toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'add-feature' && <AddDataMenu setActiveTab={setActiveTab} />}
@@ -789,7 +753,6 @@ export default function App() {
             newLayer={newLayer} setNewLayer={setNewLayer}
             setActiveTab={setActiveTab} layers={layers} setLayers={setLayers}
             setSelectedLayerId={setSelectedLayerId}
-            settings={settings}
           />
         )}
 
@@ -799,7 +762,6 @@ export default function App() {
             setCollectedPoints={setCollectedPoints}
             setSelectedLayerId={setSelectedLayerId}
             setActiveTab={setActiveTab}
-            settings={settings}
           />
         )}
 
@@ -817,34 +779,6 @@ export default function App() {
             showTutorialAgain={showTutorialAgain}
           />
         )}
-
-
-        {/* TOC SIDEBAR - always available from the bottom-left corner */}
-        <button
-          onClick={() => setIsTocSidebarOpen(prev => !prev)}
-          className={`fixed left-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-8 z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20' : 'border-white/20 text-primary hover:bg-primary/10'}`}
-          title={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
-          aria-label={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
-        >
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 3L3 7.5L12 12L21 7.5L12 3Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3 12L12 16.5L21 12" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3 16.5L12 21L21 16.5" />
-          </svg>
-        </button>
-
-        <aside
-          className={`fixed left-0 top-0 bottom-0 z-[90] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 transition-transform duration-300 ease-out ${isTocSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-          aria-hidden={!isTocSidebarOpen}
-        >
-          <div className="relative h-full w-full animate-in slide-in-from-left-4 fade-in duration-300">
-            <LayersView
-              layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
-              selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
-              toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
-            />
-          </div>
-        </aside>
 
         {/* FEATURE ATTRIBUTE POPUP */}
         {popupFeature && (
