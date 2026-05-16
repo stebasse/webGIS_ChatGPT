@@ -69,7 +69,7 @@ function makeMetadataOnlyCrs(value) {
   const code = normalizeEpsg(value) || 'EPSG:4326';
   return {
     code,
-    name: `EPSG ${code.replace('EPSG:', '')} / metadata only`,
+    name: 'EPSG metadata only / online definition not loaded',
     proj4: 'Definition not bundled. Stored as CRS metadata only.',
     source: 'manual'
   };
@@ -133,18 +133,7 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
     return FALLBACK_CRS_OPTIONS.filter(crs => crs.code.toLowerCase().includes(q) || crs.name.toLowerCase().includes(q));
   }, [s.crsSearch]);
 
-  const typedMetadataCrs = useMemo(() => {
-    const q = String(s.crsSearch || '').trim();
-    if (!q) return null;
-    const normalized = normalizeEpsg(q);
-    return normalized.startsWith('EPSG:') ? makeMetadataOnlyCrs(normalized) : null;
-  }, [s.crsSearch]);
-
-  const dropdownOptions = useMemo(() => {
-    const base = crsResults.length > 0 ? crsResults : filteredFallbackOptions;
-    if (!typedMetadataCrs) return base;
-    return base.some(c => c.code === typedMetadataCrs.code) ? base : [typedMetadataCrs, ...base];
-  }, [crsResults, filteredFallbackOptions, typedMetadataCrs]);
+  const dropdownOptions = crsResults.length > 0 ? crsResults : filteredFallbackOptions;
 
   const setCrs = (crsOrValue) => {
     const crs = typeof crsOrValue === 'object' ? crsOrValue : ([...crsResults, ...FALLBACK_CRS_OPTIONS].find(c => c.code === normalizeEpsg(crsOrValue)) || makeMetadataOnlyCrs(crsOrValue));
@@ -166,28 +155,16 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
       setCrsError('');
       return;
     }
-
-    const typed = normalizeEpsg(q);
-    const typedCrs = typed.startsWith('EPSG:') ? makeMetadataOnlyCrs(typed) : null;
     const controller = new AbortController();
     setCrsLoading(true);
     setCrsError('');
-
     try {
       const results = await searchEpsgRegistry(q, controller.signal);
-      const merged = typedCrs && !results.some(r => r.code === typedCrs.code) ? [typedCrs, ...results] : results;
-      setCrsResults(merged);
-      if (typedCrs) setCrs(merged.find(r => r.code === typedCrs.code) || typedCrs);
-      if (merged.length === 0) setCrsError('Nessun CRS trovato. Puoi comunque digitare EPSG:xxxx e applicarlo come metadata.');
+      setCrsResults(results);
+      if (results.length === 0) setCrsError('Nessun CRS trovato nel registro online. Puoi comunque applicare il codice come metadata.');
     } catch (err) {
-      if (typedCrs) {
-        setCrsResults([typedCrs]);
-        setCrs(typedCrs);
-        setCrsError('Registro online non disponibile. EPSG applicato come metadata manuale.');
-      } else {
-        setCrsResults([]);
-        setCrsError('Ricerca online non disponibile. Usa un codice EPSG o la lista locale.');
-      }
+      setCrsResults([]);
+      setCrsError('Ricerca online non disponibile. Uso lista locale ridotta o metadata EPSG manuale.');
     } finally {
       setCrsLoading(false);
     }
@@ -206,17 +183,12 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
       setCrsError('');
       try {
         const results = await searchEpsgRegistry(q, controller.signal);
-        const typed = normalizeEpsg(q);
-        const typedCrs = typed.startsWith('EPSG:') ? makeMetadataOnlyCrs(typed) : null;
-        const merged = typedCrs && !results.some(r => r.code === typedCrs.code) ? [typedCrs, ...results] : results;
-        setCrsResults(merged);
-        if (merged.length === 0) setCrsError('Nessun CRS trovato nel registro online.');
+        setCrsResults(results);
+        if (results.length === 0) setCrsError('Nessun CRS trovato nel registro online.');
       } catch (err) {
         if (err.name !== 'AbortError') {
-          const typed = normalizeEpsg(q);
-          const typedCrs = typed.startsWith('EPSG:') ? makeMetadataOnlyCrs(typed) : null;
-          setCrsResults(typedCrs ? [typedCrs] : []);
-          setCrsError(typedCrs ? 'Ricerca online non disponibile: EPSG disponibile come metadata manuale.' : 'Ricerca online non disponibile. Uso fallback locale.');
+          setCrsResults([]);
+          setCrsError('Ricerca online non disponibile. Uso fallback locale.');
         }
       } finally {
         setCrsLoading(false);
@@ -247,12 +219,12 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
                   <p className="text-base font-bold text-primary font-mono">{activeCrs.code}</p>
                   <p className="text-[10px] text-slate-400">{activeCrs.name}</p>
                   <p className="text-[9px] text-slate-500 mt-1">Source: {activeCrs.source || 'saved'}</p>
-                  <p className="text-[9px] text-amber-400/60 mt-1">CRS saved as project metadata. Coordinates remain browser GeoJSON lon/lat until reprojection is implemented.</p>
+                  <p className="text-[9px] text-emerald-400/70 mt-1">CRS reale attivo per coordinate, misure ed export quando la formula è supportata. Gli EPSG non riconosciuti restano metadata.</p>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-black/20 border border-white/5 p-3">
                   <div>
                     <p className="text-[10px] font-bold text-white uppercase">Project CRS Override</p>
-                    <p className="text-[9px] text-slate-500">Enable selected CRS metadata</p>
+                    <p className="text-[9px] text-slate-500">Enable project CRS for coordinates, measures and export</p>
                   </div>
                   <Toggle value={s.crsOverride} onChange={() => set('crsOverride', !s.crsOverride)} />
                 </div>
@@ -261,7 +233,7 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
               <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
                 <div>
                   <p className="text-[10px] font-bold text-white uppercase">Search all EPSG CRS</p>
-                  <p className="text-[9px] text-slate-500 mt-1">Type EPSG code or CRS name. Online search uses the EPSG.io registry; fallback list is used offline.</p>
+                  <p className="text-[9px] text-slate-500 mt-1">Type EPSG code or CRS name. Online search uses the EPSG.io registry; supported formulas are applied in-browser.</p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
                   <input
@@ -298,7 +270,7 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
                     onClick={() => setCrs(s.crsSearch || activeCrs.code)}
                     className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white/70 text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
                   >
-                    Apply / Select typed EPSG
+                    Apply typed EPSG
                   </button>
                   <button
                     onClick={() => { setCrsResults([]); set('crsSearch', ''); setCrs(FALLBACK_CRS_OPTIONS[0]); }}

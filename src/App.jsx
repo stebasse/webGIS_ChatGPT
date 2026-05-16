@@ -20,6 +20,7 @@ import NewLayerView from './views/NewLayerView';
 import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
+import { formatProjectedCoordinate, measureProjectedDistance, measureProjectedArea, getCrsDefinition, transformGeometryToProjectCrs } from './utils/crs';
 import OnboardingGuide from './components/OnboardingGuide';
 
 // Resolve a feature's display color given its layer and symbology rules
@@ -71,14 +72,6 @@ export default function App() {
   useEffect(() => {
     window.__GIS_DEBUG__ = settings.logLevel === 'high';
   }, [settings.logLevel]);
-
-  // TOC and app panels are mutually exclusive.
-  // Opening another menu closes the TOC; opening the TOC returns to Explore.
-  useEffect(() => {
-    if (activeTab !== 'explore' && isTocSidebarOpen) {
-      setIsTocSidebarOpen(false);
-    }
-  }, [activeTab, isTocSidebarOpen]);
 
   const [draftSettings, setDraftSettings] = useState(settings);
   const [gpsState, setGpsState] = useState({ position: null, accuracy: null, tracking: false });
@@ -228,10 +221,16 @@ export default function App() {
     return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
   };
 
-  const measureDistanceMeters = (coords) => coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
+  const measureDistanceMeters = (coords) => {
+    const projected = measureProjectedDistance(coords, settings);
+    if (projected !== null) return projected;
+    return coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
+  };
 
   const measureAreaSqMeters = (coords) => {
     if (coords.length < 3) return 0;
+    const projectedArea = measureProjectedArea(coords, settings);
+    if (projectedArea !== null) return projectedArea;
     const R = 6371008.8;
     const lat0 = toRad(coords.reduce((sum, c) => sum + c[1], 0) / coords.length);
     const projected = coords.map(([lng, lat]) => [R * toRad(lng) * Math.cos(lat0), R * toRad(lat)]);
@@ -569,7 +568,20 @@ export default function App() {
       alert('Nessuna feature da esportare.');
       return;
     }
-    const geojson = { type: 'FeatureCollection', features };
+    const crsDef = getCrsDefinition(settings);
+    const exportFeatures = crsDef.transformable && crsDef.code !== 'EPSG:4326'
+      ? features.map(f => ({
+          ...f,
+          properties: { ...f.properties, projectCrs: crsDef.code, originalCrs: f.properties?.crs || 'EPSG:4326' },
+          geometry: transformGeometryToProjectCrs(f.geometry, settings)
+        }))
+      : features;
+    const geojson = {
+      type: 'FeatureCollection',
+      name: layerIdFilter ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer') : 'all_layers',
+      crs: { type: 'name', properties: { name: crsDef.code, note: crsDef.transformable ? 'Coordinates exported in selected project CRS.' : 'CRS metadata only; coordinates remain WGS84 lon/lat.' } },
+      features: exportFeatures
+    };
     const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -577,7 +589,7 @@ export default function App() {
     const layerName = layerIdFilter
       ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer')
       : 'all_layers';
-    a.download = `${layerName}_${new Date().toISOString().split('T')[0]}.geojson`;
+    a.download = `${layerName}_${(settings.crsCode || 'EPSG4326').replace(':','')}_${new Date().toISOString().split('T')[0]}.geojson`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -726,6 +738,8 @@ export default function App() {
             measureResult={formatMeasureValue(measureMode, measureCoordinates)}
             toggleMeasureMode={toggleMeasureMode}
             clearMeasure={clearMeasure}
+            projectCoordinateText={gpsState.position ? formatProjectedCoordinate(gpsState.position, settings) : ''}
+            projectCrsStatus={getCrsDefinition(settings)}
           />
         )}
 
@@ -736,6 +750,7 @@ export default function App() {
             newLayer={newLayer} setNewLayer={setNewLayer}
             setActiveTab={setActiveTab} layers={layers} setLayers={setLayers}
             setSelectedLayerId={setSelectedLayerId}
+            settings={settings}
           />
         )}
 
@@ -745,6 +760,7 @@ export default function App() {
             setCollectedPoints={setCollectedPoints}
             setSelectedLayerId={setSelectedLayerId}
             setActiveTab={setActiveTab}
+            settings={settings}
           />
         )}
 
@@ -766,14 +782,8 @@ export default function App() {
 
         {/* TOC SIDEBAR - always available from the bottom-left corner */}
         <button
-          onClick={() => {
-            setIsTocSidebarOpen(prev => {
-              const next = !prev;
-              if (next) setActiveTab('explore');
-              return next;
-            });
-          }}
-          className={`fixed left-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20' : 'border-white/20 text-primary hover:bg-primary/10'}`}
+          onClick={() => setIsTocSidebarOpen(prev => !prev)}
+          className={`fixed left-4 bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-8 z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20' : 'border-white/20 text-primary hover:bg-primary/10'}`}
           title={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
           aria-label={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
         >

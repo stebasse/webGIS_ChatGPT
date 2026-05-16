@@ -206,8 +206,8 @@ export default function ExploreHUD({
       {gpsState.position && (
         <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-none">
           <div className="glass px-2.5 py-1.5 rounded-xl text-[8px] font-mono text-emerald-400 shadow-xl border border-emerald-500/20">
-            <div>{gpsState.position[1].toFixed(6)}, {gpsState.position[0].toFixed(6)}</div>
-            {gpsState.accuracy && <div className="text-white/30 text-[7px]">±{gpsState.accuracy.toFixed(1)} m</div>}
+            <div>{projectCoordinateText || `${gpsState.position[1].toFixed(6)}, ${gpsState.position[0].toFixed(6)}`}</div>
+            {gpsState.accuracy && <div className="text-white/30 text-[7px]">±{gpsState.accuracy.toFixed(1)} m{projectCrsStatus?.transformable === false ? ' · CRS metadata only' : ''}</div>}
           </div>
         </div>
       )}

@@ -86,7 +86,7 @@ function formatBytes(bytes) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-export default function UploadView({ layers, setLayers, setCollectedPoints, setSelectedLayerId, setActiveTab }) {
+export default function UploadView({ layers, setLayers, setCollectedPoints, setSelectedLayerId, setActiveTab, settings }) {
   const fileInputRef = useRef(null);
   const [pickedFile, setPickedFile] = useState(null);   // { name, size, format, text }
   const [status, setStatus] = useState(null);            // { type: 'error'|'success'|'warn', msg }
@@ -151,6 +151,8 @@ export default function UploadView({ layers, setLayers, setCollectedPoints, setS
           { name: 'Timestamp', type: 'Date', defaultVal: 'NOW' },
           ...autoFields
         ],
+        crs: settings?.crsCode || 'EPSG:4326',
+        crsName: settings?.crsName || 'WGS 84',
         format: ext === 'kml' ? 'kml' : 'geojson',
         formatExt: ext === 'kml' ? '.kml' : '.geojson',
         dirLabel: null,
