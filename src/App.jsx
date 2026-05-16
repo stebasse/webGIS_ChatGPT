@@ -63,10 +63,13 @@ export default function App() {
     }
   }, [layers, selectedLayerId, setSelectedLayerId]);
 
-  // Apply theme class to <html>
+  // Apply theme class to the whole document. In Settings, preview draft theme immediately; Save persists it.
   useEffect(() => {
-    document.documentElement.classList.toggle('light-theme', settings.theme === 'light');
-  }, [settings.theme]);
+    const light = effectiveTheme === 'light';
+    document.documentElement.classList.toggle('light-theme', light);
+    document.body.classList.toggle('light-theme', light);
+    document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  }, [effectiveTheme]);
 
   // Log verbosity
   useEffect(() => {
@@ -74,6 +77,12 @@ export default function App() {
   }, [settings.logLevel]);
 
   const [draftSettings, setDraftSettings] = useState(settings);
+  const effectiveTheme = activeTab === 'settings' ? (draftSettings.theme || settings.theme) : (settings.theme || 'dark');
+  const isLightTheme = effectiveTheme === 'light';
+
+  useEffect(() => {
+    setDraftSettings(settings);
+  }, [settings]);
   const [gpsState, setGpsState] = useState({ position: null, accuracy: null, tracking: false });
   const [mapBearing, setMapBearing] = useState(0);
   const [gridScaleMeters, setGridScaleMeters] = useState(100);
@@ -641,7 +650,7 @@ export default function App() {
   const gpsIcon = createGpsIcon(deviceHeading || 0);
 
   return (
-    <div className="relative h-[100dvh] w-full overflow-hidden bg-[#0f172a] font-sans select-none text-slate-100 flex flex-col">
+    <div className={`relative h-[100dvh] w-full overflow-hidden font-sans select-none flex flex-col transition-colors duration-300 ${isLightTheme ? 'bg-slate-100 text-slate-900' : 'bg-[#0f172a] text-slate-100'}`}>
 
       {/* PERSISTENT MAP BACKGROUND */}
       <div className={`absolute inset-0 transition-all duration-700 z-0 ${activeTab !== 'explore' ? 'blur-md scale-105 opacity-40 pointer-events-none' : 'opacity-100'}`}>
@@ -652,7 +661,7 @@ export default function App() {
           rotate={true}
           rotateControl={false}
           touchRotate={true}
-          style={{ width: '100%', height: '100%', background: '#0f172a' }}
+          style={{ width: '100%', height: '100%', background: isLightTheme ? '#f8fafc' : '#0f172a' }}
         >
           <TileLayer
             attribution={BASEMAPS[activeBasemap].attr}

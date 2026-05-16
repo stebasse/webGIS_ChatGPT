@@ -300,7 +300,7 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
                   onChange={v => set('theme', v)}
                   options={[{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]}
                 />
-                <p className="text-[9px] text-amber-400/60">Light theme applied on Save (limited CSS variables)</p>
+                <p className="text-[9px] text-emerald-400/70">Theme preview is immediate; Save Changes makes it persistent.</p>
               </div>
               <div className="space-y-2">
                 <p className="text-[10px] font-bold text-slate-500 uppercase">Units</p>
