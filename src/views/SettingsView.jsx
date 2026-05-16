@@ -1,7 +1,26 @@
 const DEFAULT_SETTINGS = {
   theme: 'dark', units: 'metric', crsOverride: false,
+  crsCode: 'EPSG:4326',
+  crsName: 'WGS 84',
+  crsProj4: '+proj=longlat +datum=WGS84 +no_defs',
   gpu: true, logLevel: 'low', compassMode: false
 };
+
+const CRS_OPTIONS = [
+  { code: 'EPSG:4326', name: 'WGS 84', proj4: '+proj=longlat +datum=WGS84 +no_defs' },
+  { code: 'EPSG:3857', name: 'WGS 84 / Pseudo-Mercator', proj4: '+proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 +units=m +nadgrids=@null +wktext +no_defs' },
+  { code: 'EPSG:4258', name: 'ETRS89', proj4: '+proj=longlat +ellps=GRS80 +no_defs' },
+  { code: 'EPSG:25832', name: 'ETRS89 / UTM zone 32N', proj4: '+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs' },
+  { code: 'EPSG:25833', name: 'ETRS89 / UTM zone 33N', proj4: '+proj=utm +zone=33 +ellps=GRS80 +units=m +no_defs' },
+  { code: 'EPSG:32632', name: 'WGS 84 / UTM zone 32N', proj4: '+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs' },
+  { code: 'EPSG:32633', name: 'WGS 84 / UTM zone 33N', proj4: '+proj=utm +zone=33 +datum=WGS84 +units=m +no_defs' },
+  { code: 'EPSG:3003', name: 'Monte Mario / Italy zone 1', proj4: '+proj=tmerc +lat_0=0 +lon_0=9 +k=0.9996 +x_0=1500000 +y_0=0 +ellps=intl +units=m +no_defs' },
+  { code: 'EPSG:3004', name: 'Monte Mario / Italy zone 2', proj4: '+proj=tmerc +lat_0=0 +lon_0=15 +k=0.9996 +x_0=2520000 +y_0=0 +ellps=intl +units=m +no_defs' },
+  { code: 'EPSG:6706', name: 'RDN2008', proj4: '+proj=longlat +ellps=GRS80 +no_defs' },
+  { code: 'EPSG:6875', name: 'RDN2008 / Italy zone', proj4: '+proj=tmerc +lat_0=0 +lon_0=12 +k=0.9985 +x_0=7000000 +y_0=0 +ellps=GRS80 +units=m +no_defs' },
+  { code: 'EPSG:3035', name: 'ETRS89-extended / LAEA Europe', proj4: '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +units=m +no_defs' },
+  { code: 'EPSG:3034', name: 'ETRS89-extended / LCC Europe', proj4: '+proj=lcc +lat_0=52 +lon_0=10 +lat_1=35 +lat_2=65 +x_0=4000000 +y_0=2800000 +ellps=GRS80 +units=m +no_defs' },
+];
 
 function Toggle({ value, onChange }) {
   return (
@@ -39,9 +58,44 @@ function SegmentControl({ value, onChange, options }) {
   );
 }
 
+
+function normalizeEpsg(value) {
+  const raw = String(value || '').trim().toUpperCase();
+  if (!raw) return '';
+  const digits = raw.replace('EPSG:', '').replace(/[^0-9]/g, '');
+  return digits ? `EPSG:${digits}` : raw;
+}
+
+function resolveCrs(value) {
+  const code = normalizeEpsg(value);
+  const known = CRS_OPTIONS.find(c => c.code === code);
+  if (known) return known;
+  return {
+    code,
+    name: 'Custom / EPSG lookup required',
+    proj4: 'Definition not bundled. Stored as CRS metadata only.'
+  };
+}
+
 export default function SettingsView({ draftSettings, setDraftSettings, saveSettings, showTutorialAgain }) {
   const s = draftSettings;
   const set = (key, val) => setDraftSettings(prev => ({ ...prev, [key]: val }));
+  const activeCrs = resolveCrs(s.crsCode || 'EPSG:4326');
+  const matchingCrsOptions = CRS_OPTIONS.filter(crs => {
+    const q = String(s.crsSearch || '').trim().toLowerCase();
+    if (!q) return true;
+    return crs.code.toLowerCase().includes(q) || crs.name.toLowerCase().includes(q);
+  });
+  const setCrs = (value) => {
+    const crs = resolveCrs(value);
+    setDraftSettings(prev => ({
+      ...prev,
+      crsOverride: true,
+      crsCode: crs.code,
+      crsName: crs.name,
+      crsProj4: crs.proj4
+    }));
+  };
 
   return (
     <div className="w-full max-w-4xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
@@ -55,27 +109,59 @@ export default function SettingsView({ draftSettings, setDraftSettings, saveSett
           {/* ── CRS ── */}
           <section>
             <SectionHeader icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />} title="Coordinate Reference" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-1">
-                <p className="text-[10px] font-bold text-slate-500 uppercase">Global Default CRS</p>
-                <p className="text-base font-bold text-primary font-mono">EPSG:4326 (WGS 84)</p>
-                <p className="text-[9px] text-slate-600">All data stored as WGS 84 lon/lat</p>
-              </div>
-              <div
-                className="p-5 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between cursor-pointer hover:bg-white/10 transition-colors"
-                onClick={() => set('crsOverride', !s.crsOverride)}
-              >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
                 <div>
-                  <p className="text-[10px] font-bold text-white uppercase">Project CRS Override</p>
-                  <p className="text-[10px] text-slate-500 mt-1">Store per-project CRS metadata</p>
-                  <p className="text-[9px] text-amber-400/60 mt-1">Metadata only — no re-projection</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase">Active Project CRS</p>
+                  <p className="text-base font-bold text-primary font-mono">{activeCrs.code}</p>
+                  <p className="text-[10px] text-slate-400">{activeCrs.name}</p>
+                  <p className="text-[9px] text-amber-400/60 mt-1">Stored as project CRS metadata. Geometry coordinates remain browser GeoJSON lon/lat unless reprojection is implemented.</p>
                 </div>
-                <Toggle value={s.crsOverride} onChange={() => set('crsOverride', !s.crsOverride)} />
+                <div className="flex items-center justify-between rounded-xl bg-black/20 border border-white/5 p-3">
+                  <div>
+                    <p className="text-[10px] font-bold text-white uppercase">Project CRS Override</p>
+                    <p className="text-[9px] text-slate-500">Enable selected CRS metadata</p>
+                  </div>
+                  <Toggle value={s.crsOverride} onChange={() => set('crsOverride', !s.crsOverride)} />
+                </div>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+                <div>
+                  <p className="text-[10px] font-bold text-white uppercase">Search EPSG</p>
+                  <p className="text-[9px] text-slate-500 mt-1">Type an EPSG code or search the bundled CRS list.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2">
+                  <input
+                    value={s.crsSearch || ''}
+                    onChange={(e) => set('crsSearch', e.target.value)}
+                    placeholder="EPSG:4326, 3857, UTM, Italy..."
+                    className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-primary"
+                  />
+                  <button
+                    onClick={() => setCrs(s.crsSearch || activeCrs.code)}
+                    className="px-4 py-2.5 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                  >
+                    Apply
+                  </button>
+                </div>
+                <select
+                  value={CRS_OPTIONS.some(c => c.code === activeCrs.code) ? activeCrs.code : ''}
+                  onChange={(e) => setCrs(e.target.value)}
+                  className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-primary"
+                >
+                  <option value="" className="bg-[#0f172a] text-white">Custom / {activeCrs.code}</option>
+                  {matchingCrsOptions.map(crs => (
+                    <option key={crs.code} value={crs.code} className="bg-[#0f172a] text-white">
+                      {crs.code} — {crs.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="mt-3 p-3 rounded-xl bg-black/20 border border-white/5">
               <p className="text-[9px] font-bold text-slate-600 uppercase mb-1">Active PROJ Definition</p>
-              <code className="text-[10px] text-slate-400 font-mono">+proj=longlat +datum=WGS84 +no_defs</code>
+              <code className="text-[10px] text-slate-400 font-mono break-all">{activeCrs.proj4}</code>
             </div>
           </section>
 

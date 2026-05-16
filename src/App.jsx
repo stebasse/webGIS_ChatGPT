@@ -35,6 +35,9 @@ function resolveFeatureColor(feature, layer) {
 
 const DEFAULT_SETTINGS = {
   theme: 'dark', units: 'metric', crsOverride: false,
+  crsCode: 'EPSG:4326',
+  crsName: 'WGS 84',
+  crsProj4: '+proj=longlat +datum=WGS84 +no_defs',
   gpu: true, logLevel: 'low', compassMode: false
 };
 
