@@ -42,6 +42,7 @@ const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
+  const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(true);
   const [showGrid, setShowGrid] = useState(false);
   const [activeBasemap, setActiveBasemap] = useState('carto_dark');
 
@@ -717,11 +718,32 @@ export default function App() {
         )}
 
         {activeTab === 'layers' && (
-          <LayersView
-            layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
-            selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
-            toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
-          />
+          <div className={`fixed left-0 top-0 bottom-0 z-[80] pointer-events-auto transition-all duration-300 ease-out ${isTocSidebarOpen ? 'w-[min(94vw,440px)]' : 'w-16'} p-3 sm:p-4`}>
+            {!isTocSidebarOpen ? (
+              <button
+                onClick={() => setIsTocSidebarOpen(true)}
+                className="glass w-11 h-11 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center text-primary hover:bg-primary/10 transition-all"
+                title="Open Table of Contents"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h10" /></svg>
+              </button>
+            ) : (
+              <div className="relative h-full w-full animate-in slide-in-from-left-4 fade-in duration-300">
+                <button
+                  onClick={() => setIsTocSidebarOpen(false)}
+                  className="absolute right-4 top-3 z-[90] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+                  title="Close Table of Contents"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <LayersView
+                  layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
+                  selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
+                  toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'add-feature' && <AddDataMenu setActiveTab={setActiveTab} />}
