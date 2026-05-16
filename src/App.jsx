@@ -753,10 +753,10 @@ export default function App() {
         )}
 
 
-        {/* TOC SIDEBAR - always available from the left edge */}
+        {/* TOC SIDEBAR - always available from the bottom-left corner */}
         <button
           onClick={() => setIsTocSidebarOpen(prev => !prev)}
-          className={`fixed left-3 top-1/2 -translate-y-1/2 z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20 translate-x-[min(94vw,440px)] sm:translate-x-[440px]' : 'border-white/20 text-primary hover:bg-primary/10'}`}
+          className={`fixed left-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 z-[95] pointer-events-auto glass w-12 h-12 rounded-2xl border shadow-2xl flex items-center justify-center transition-all duration-300 ${isTocSidebarOpen ? 'border-primary/50 text-white bg-primary/20' : 'border-white/20 text-primary hover:bg-primary/10'}`}
           title={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
           aria-label={isTocSidebarOpen ? 'Close TOC / Layers' : 'Open TOC / Layers'}
         >
@@ -768,13 +768,13 @@ export default function App() {
         </button>
 
         <aside
-          className={`fixed left-0 top-0 bottom-0 z-[90] pointer-events-auto w-[min(94vw,440px)] p-3 sm:p-4 transition-transform duration-300 ease-out ${isTocSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
+          className={`fixed left-0 top-0 bottom-0 z-[90] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 transition-transform duration-300 ease-out ${isTocSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
           aria-hidden={!isTocSidebarOpen}
         >
           <div className="relative h-full w-full animate-in slide-in-from-left-4 fade-in duration-300">
             <button
               onClick={() => setIsTocSidebarOpen(false)}
-              className="absolute right-4 top-3 z-[96] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              className="absolute right-3 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[96] glass w-10 h-10 rounded-2xl border border-white/15 flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
               title="Close TOC / Layers"
               aria-label="Close TOC / Layers"
             >
