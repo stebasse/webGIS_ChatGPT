@@ -5,6 +5,9 @@ export default function ExploreHUD({
   showGrid, setShowGrid, activeBasemap, setActiveBasemap,
   gpsState, locateMe,
   drawingMode, finishDrawing,
+  draftCoordinatesCount = 0,
+  undoDraftVertex,
+  clearDraftFeature,
   mapBearing, setMapBearing,
   gridScaleMeters,
   onAddFeature,
@@ -76,8 +79,8 @@ export default function ExploreHUD({
         />
       )}
 
-      {/* ── Top status badges above toolbar ─────────────────────────────── */}
-      <div className="fixed top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-6 flex items-start justify-between gap-3 pointer-events-none z-[90]">
+      {/* ── Layer / CRS status badges below toolbar ───────────────────────── */}
+      <div className="fixed top-[calc(4.6rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-6 flex items-start justify-between gap-3 pointer-events-none z-[90]">
         <div className="min-w-0 max-w-[48vw] sm:max-w-xs">
           {activeLayer ? (
             <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 flex items-center gap-2 shadow-2xl">
@@ -101,7 +104,7 @@ export default function ExploreHUD({
       </div>
 
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="absolute top-[calc(3.8rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
+      <div className="absolute top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
@@ -230,7 +233,7 @@ export default function ExploreHUD({
       </div>
 
       {showGoTo && (
-        <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
+        <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-[9px] font-bold text-white uppercase tracking-widest">Go To Coordinates</p>
@@ -272,17 +275,34 @@ export default function ExploreHUD({
 
       {/* ── Finish Drawing banner ────────────────────────────────────────── */}
       {drawingMode && (
-        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2">
+        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 max-w-[96vw] overflow-x-auto no-scrollbar">
           <button
             onClick={() => setIsFreehandMode(!isFreehandMode)}
-            className={`glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] border transition-all text-[9px] font-bold uppercase tracking-widest ${isFreehandMode ? 'bg-primary/40 border-primary text-white shadow-[0_0_15px_rgba(0,191,255,0.4)]' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
+            className={`glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] border transition-all text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ${isFreehandMode ? 'bg-primary/40 border-primary text-white shadow-[0_0_15px_rgba(0,191,255,0.4)]' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
             Freehand
           </button>
           <button
+            onClick={undoDraftVertex}
+            disabled={draftCoordinatesCount <= 0}
+            className="glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] bg-white/5 border border-white/10 text-slate-300 font-bold uppercase tracking-widest text-[9px] hover:border-primary hover:text-primary disabled:opacity-40 disabled:pointer-events-none transition-all flex-shrink-0"
+            title="Annulla ultimo vertice"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 14L4 9m0 0l5-5M4 9h11a5 5 0 010 10h-1" /></svg>
+            Undo
+          </button>
+          <button
+            onClick={clearDraftFeature}
+            className="glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] bg-red-500/15 border border-red-500/40 text-red-300 font-bold uppercase tracking-widest text-[9px] hover:bg-red-500 hover:text-white transition-all flex-shrink-0"
+            title="Elimina la feature in creazione"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            Elimina
+          </button>
+          <button
             onClick={finishDrawing}
-            className="glass flex items-center gap-2 px-5 py-2.5 rounded-[2rem] bg-emerald-500/20 border border-emerald-500 shadow-lg text-emerald-400 font-bold uppercase tracking-widest text-[9px] hover:bg-emerald-500 hover:text-white transition-all"
+            className="glass flex items-center gap-2 px-5 py-2.5 rounded-[2rem] bg-emerald-500/20 border border-emerald-500 shadow-lg text-emerald-400 font-bold uppercase tracking-widest text-[9px] hover:bg-emerald-500 hover:text-white transition-all flex-shrink-0"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             Finish {drawingMode}

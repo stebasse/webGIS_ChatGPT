@@ -415,6 +415,17 @@ export default function App() {
     }
   }, [measureMode, drawingMode, isFreehandMode, handleAddNode]);
 
+
+  const undoDraftVertex = useCallback(() => {
+    setDraftCoordinates(prev => prev.slice(0, -1));
+  }, []);
+
+  const clearDraftFeature = useCallback(() => {
+    setDraftCoordinates([]);
+    setDrawingMode(false);
+    setIsFreehandMode(false);
+  }, []);
+
   const finishDrawing = () => {
     const minVerts = drawingMode === 'Polygon' ? 3 : 2;
     if (draftCoordinates.length < minVerts) {
@@ -933,6 +944,9 @@ export default function App() {
             activeBasemap={activeBasemap} setActiveBasemap={setActiveBasemap}
             gpsState={gpsState} locateMe={locateMe}
             drawingMode={drawingMode} finishDrawing={finishDrawing}
+            draftCoordinatesCount={draftCoordinates.length}
+            undoDraftVertex={undoDraftVertex}
+            clearDraftFeature={clearDraftFeature}
             mapBearing={mapBearing} setMapBearing={setMapBearing}
             gridScaleMeters={gridScaleMeters}
             onAddFeature={collectPoint}
