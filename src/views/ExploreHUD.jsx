@@ -28,6 +28,8 @@ export default function ExploreHUD({
   const [gridPosition, setGridPosition] = useState('center');
   const [showGoTo, setShowGoTo] = useState(false);
   const [goToValues, setGoToValues] = useState({ x: '', y: '', crs: projectCrs || 'EPSG:4326' });
+  const [showScaleInput, setShowScaleInput] = useState(false);
+  const [scaleInputValue, setScaleInputValue] = useState('1:10000');
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -154,24 +156,41 @@ export default function ExploreHUD({
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
         {/* Scale indicator + scale lock */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="flex flex-col gap-0.5 w-[128px]">
+        <div className="flex items-center gap-1.5 flex-shrink-0 rounded-2xl px-1 py-0.5">
+          <div className="flex flex-col gap-0.5 w-[118px] sm:w-[128px]">
             <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
               <div className="w-0.5 h-full bg-white/40" />
               <div className="w-0.5 h-full bg-white/40" />
             </div>
-            <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">
-              {scaleLocked && lockedScaleDenominator ? `1:${lockedScaleDenominator}` : formatDistance(gridScaleMeters)}
+            <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm leading-none">
+              {formatDistance(gridScaleMeters)}
             </span>
+            {scaleLocked && lockedScaleDenominator && (
+              <span className="text-[6px] sm:text-[7px] font-bold text-primary tracking-widest uppercase text-center leading-none">
+                LOCK 1:{lockedScaleDenominator}
+              </span>
+            )}
           </div>
           <button
-            onClick={toggleScaleLock}
-            onContextMenu={(e) => { e.preventDefault(); const v = window.prompt('Inserisci scala, es. 1:10000', lockedScaleDenominator ? `1:${lockedScaleDenominator}` : '1:10000'); if (v) setManualScale?.(v); }}
-            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${scaleLocked ? 'bg-primary/25 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare.' : 'Fissa scala manuale'}
+            onClick={() => {
+              if (scaleLocked) {
+                toggleScaleLock?.();
+                setShowScaleInput(false);
+              } else {
+                setScaleInputValue(lockedScaleDenominator ? `1:${lockedScaleDenominator}` : '1:10000');
+                setShowScaleInput(v => !v);
+              }
+            }}
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 ${scaleLocked ? 'bg-primary/25 border-primary text-primary shadow-[0_0_14px_rgba(0,191,255,0.25)]' : showScaleInput ? 'bg-primary/15 border-primary/70 text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare.' : 'Imposta e blocca scala, es. 1:10000'}
+            aria-label={scaleLocked ? 'Sblocca scala mappa' : 'Imposta scala mappa'}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4" />
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {scaleLocked ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 10V7a4 4 0 00-8 0v3M6 10h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7a2 2 0 012-2zm6 4v3" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10V7a4 4 0 117.45 2.03M6 10h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7a2 2 0 012-2zm6 4v3" />
+              )}
             </svg>
           </button>
         </div>
@@ -227,6 +246,29 @@ export default function ExploreHUD({
           <button onClick={() => onGoToCoordinate?.({ x: goToValues.x, y: goToValues.y, crs: goToValues.crs })} className="w-full px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Center Map</button>
         </div>
       )}
+
+      {showScaleInput && !scaleLocked && (
+        <div className="absolute top-[calc(8.1rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">Blocca scala</div>
+          <div className="flex items-center gap-2">
+            <input
+              value={scaleInputValue}
+              onChange={(e) => setScaleInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setManualScale?.(scaleInputValue); setShowScaleInput(false); } }}
+              placeholder="1:10000"
+              className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary"
+            />
+            <button
+              onClick={() => { setManualScale?.(scaleInputValue); setShowScaleInput(false); }}
+              className="px-3 py-2 rounded-xl bg-primary text-white text-[9px] font-bold uppercase tracking-widest"
+            >
+              Lock
+            </button>
+          </div>
+          <p className="mt-2 text-[8px] text-white/40 leading-snug">La distanza della scala resta visibile; zoom e pinch sono bloccati fino allo sblocco.</p>
+        </div>
+      )}
+
 
       {/* ── Finish Drawing banner ────────────────────────────────────────── */}
       {drawingMode && (
