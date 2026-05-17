@@ -698,7 +698,7 @@ export default function App() {
       : collectedPoints;
     if (features.length === 0) {
       alert('Nessuna feature da esportare.');
-      return;
+      return false;
     }
 
     const layer = layerIdFilter ? layers.find(l => String(l.id) === String(layerIdFilter)) : null;
@@ -732,7 +732,7 @@ export default function App() {
         JSON.stringify(exportCrs)
       ].join(','));
       content = [header.join(','), ...rows].join('\n');
-      mime = 'text/csv';
+      mime = 'text/csv;charset=utf-8';
     } else {
       const geojson = {
         type: 'FeatureCollection',
@@ -741,66 +741,95 @@ export default function App() {
         features: exportFeatures
       };
       content = JSON.stringify(geojson, null, 2);
-      mime = 'application/geo+json';
+      mime = extension === 'json' ? 'application/json;charset=utf-8' : 'application/geo+json;charset=utf-8';
       filename = `${filenameBase}.${extension === 'json' ? 'json' : 'geojson'}`;
     }
 
-    const writeFileToDirectory = async (directoryHandle, fileName, fileContent, fileMime) => {
-      const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+    const ensureWritablePermission = async (handle) => {
+      if (!handle || typeof handle.queryPermission !== 'function') return true;
+      const opts = { mode: 'readwrite' };
+      const current = await handle.queryPermission(opts);
+      if (current === 'granted') return true;
+      if (typeof handle.requestPermission !== 'function') return false;
+      return await handle.requestPermission(opts) === 'granted';
+    };
+
+    const writeBlobHandle = async (fileHandle, fileContent, fileMime) => {
+      const granted = await ensureWritablePermission(fileHandle);
+      if (!granted) throw new Error('Permesso di scrittura negato sul file selezionato.');
       const writable = await fileHandle.createWritable();
       await writable.write(new Blob([fileContent], { type: fileMime }));
       await writable.close();
     };
 
-    try {
-      const writeFileHandle = async (fileHandle, fileContent, fileMime) => {
-        const writable = await fileHandle.createWritable();
-        await writable.write(new Blob([fileContent], { type: fileMime }));
-        await writable.close();
-      };
+    const writeFileToDirectory = async (directoryHandle, fileName, fileContent, fileMime) => {
+      const granted = await ensureWritablePermission(directoryHandle);
+      if (!granted) throw new Error('Permesso di scrittura negato sulla cartella selezionata.');
+      const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+      await writeBlobHandle(fileHandle, fileContent, fileMime);
+    };
 
+    const saveWithFilePicker = async () => {
+      if (!window.showSaveFilePicker) return false;
+      const accept = extension === 'csv'
+        ? { 'text/csv': ['.csv'] }
+        : extension === 'json'
+          ? { 'application/json': ['.json'] }
+          : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'] };
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{ description: 'GIS export', accept }],
+        excludeAcceptAllOption: false,
+        startIn: 'downloads',
+      });
+      await writeBlobHandle(handle, content, mime);
+      if (extension !== 'csv') {
+        downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain;charset=utf-8');
+      }
+      return true;
+    };
+
+    try {
       if (options.directoryHandle) {
         await writeFileToDirectory(options.directoryHandle, filename, content, mime);
         if (extension !== 'csv') {
-          await writeFileToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+          await writeFileToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain;charset=utf-8');
         }
-      } else if (options.fileHandle) {
-        await writeFileHandle(options.fileHandle, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      } else if (options.useSaveFilePicker && window.showSaveFilePicker) {
-        const fileExt = filename.split('.').pop();
-        const accept = extension === 'csv'
-          ? { 'text/csv': ['.csv'] }
-          : extension === 'json'
-            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
-            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
-        const handle = await window.showSaveFilePicker({
-          suggestedName: filename,
-          types: [{ description: 'GIS export', accept }],
-          excludeAcceptAllOption: false,
-          startIn: 'downloads',
-        });
-        await writeFileHandle(handle, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      } else {
-        downloadTextFile(filename, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
+        return true;
       }
+
+      if (options.fileHandle) {
+        await writeBlobHandle(options.fileHandle, content, mime);
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain;charset=utf-8');
+        }
+        return true;
+      }
+
+      if (options.pickDirectory && window.showDirectoryPicker) {
+        const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' });
+        await writeFileToDirectory(dirHandle, filename, content, mime);
+        if (extension !== 'csv') {
+          await writeFileToDirectory(dirHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain;charset=utf-8');
+        }
+        return true;
+      }
+
+      if (options.useSaveFilePicker) {
+        const saved = await saveWithFilePicker();
+        if (saved) return true;
+      }
+
+      downloadTextFile(filename, content, mime);
+      if (extension !== 'csv') {
+        downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain;charset=utf-8');
+      }
+      return true;
     } catch (err) {
-      if (err?.name !== 'AbortError') {
-        console.error(err);
-        alert('Export non riuscito. Uso download standard.');
-        downloadTextFile(filename, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      }
+      if (err?.name === 'AbortError') return false;
+      console.error(err);
+      alert(`Export non riuscito: ${err?.message || 'errore sconosciuto'}`);
+      return false;
     }
   };
 
