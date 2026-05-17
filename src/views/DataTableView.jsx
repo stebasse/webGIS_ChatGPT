@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { FALLBACK_CRS, getCrsCode } from '../services/crsService';
 
-export default function DataTableView({ collectedPoints, setCollectedPoints, layers, exportData, projectCrs = 'EPSG:4326' }) {
+function downloadGeoJSON(features, filename) {
+  const geojson = { type: 'FeatureCollection', features };
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export default function DataTableView({ collectedPoints, setCollectedPoints, layers, exportData }) {
   const [filterLayerId, setFilterLayerId] = useState('all');
   const [selectedFeatureId, setSelectedFeatureId] = useState(null);
-  const [showExportPanel, setShowExportPanel] = useState(false);
-  const [exportOptions, setExportOptions] = useState({
-    filename: `webgis_export_${new Date().toISOString().split('T')[0]}`,
-    format: 'geojson',
-    crs: projectCrs || 'EPSG:4326',
-  });
 
   const displayedFeatures = filterLayerId === 'all'
     ? collectedPoints
@@ -21,47 +25,33 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
     if (selectedFeatureId === id) setSelectedFeatureId(null);
   };
 
-  const openExport = () => {
+  const handleExport = () => {
+    const features = filterLayerId === 'all' ? collectedPoints : displayedFeatures;
+    if (features.length === 0) { alert('Nessuna feature da esportare.'); return; }
     const label = filterLayerId === 'all'
       ? 'all_layers'
-      : (layers.find(l => String(l.id) === String(filterLayerId))?.name || 'layer');
-    setExportOptions(prev => ({
-      ...prev,
-      filename: `${label}_${new Date().toISOString().split('T')[0]}`,
-      crs: prev.crs || projectCrs || 'EPSG:4326',
-    }));
-    setShowExportPanel(true);
+      : (layers.find(l => l.id === Number(filterLayerId))?.name || 'layer');
+    downloadGeoJSON(features, `${label}_${new Date().toISOString().split('T')[0]}.geojson`);
   };
 
-  const handleExport = async () => {
-    if (displayedFeatures.length === 0) {
-      alert('Nessuna feature da esportare.');
-      return;
-    }
-    const layerFilter = filterLayerId === 'all' ? null : filterLayerId;
-    await exportData?.(layerFilter, {
-      filename: exportOptions.filename,
-      format: exportOptions.format,
-      crs: getCrsCode(exportOptions.crs),
-      includePrj: true,
-    });
-    setShowExportPanel(false);
-  };
-
-  const standardKeys = new Set(['id', 'layerId', 'layerName', 'timestamp', 'accuracy', 'source', 'sourceCrs', 'exportCrs']);
+  // Collect extra attribute keys from visible features (beyond the standard ones)
+  const standardKeys = new Set(['id', 'layerId', 'layerName', 'timestamp', 'accuracy', 'source']);
   const extraKeys = [...new Set(displayedFeatures.flatMap(f => Object.keys(f.properties || {})).filter(k => !standardKeys.has(k)))].slice(0, 4);
 
   const selectedFeature = selectedFeatureId ? collectedPoints.find(f => f.properties.id === selectedFeatureId) : null;
 
   return (
-    <div className="w-full max-w-5xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto relative">
+    <div className="w-full max-w-5xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 mt-2 w-full text-center">
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Attribute Table</h2>
       </div>
 
       <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
+
+        {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-4 border-b border-white/5 bg-white/5">
           <div className="flex items-center gap-3">
+            {/* Layer filter */}
             <select
               value={filterLayerId}
               onChange={e => setFilterLayerId(e.target.value)}
@@ -78,15 +68,16 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
           </div>
 
           <button
-            onClick={openExport}
+            onClick={handleExport}
             disabled={displayedFeatures.length === 0}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Export
+            Export GeoJSON {filterLayerId !== 'all' ? '(layer)' : '(all)'}
           </button>
         </div>
 
+        {/* Table header */}
         <div className="hidden sm:grid px-8 py-3 border-b border-white/5 bg-black/10 text-[9px] font-bold text-slate-600 uppercase tracking-widest"
           style={{ gridTemplateColumns: `auto 1fr auto auto ${extraKeys.map(() => '1fr').join(' ')} auto` }}>
           <div className="w-12">ID</div>
@@ -97,6 +88,7 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
           <div className="w-16 text-right">Actions</div>
         </div>
 
+        {/* Rows */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           {displayedFeatures.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-600 p-8">
@@ -115,20 +107,31 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
                   className={`grid items-center px-4 sm:px-8 py-3 border-b border-white/5 transition-all cursor-pointer text-xs ${isSelected ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-white/5'}`}
                   style={{ gridTemplateColumns: `auto 1fr auto auto ${extraKeys.map(() => '1fr').join(' ')} auto` }}
                 >
+                  {/* ID */}
                   <div className="w-12 font-mono text-slate-500 text-[9px]">…{String(feat.properties.id).slice(-4)}</div>
+
+                  {/* Layer */}
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layer?.colorHex || '#64748b' }} />
                     <span className="text-white font-semibold truncate">{layer?.name || 'Unknown'}</span>
                   </div>
+
+                  {/* Geometry */}
                   <div className="w-20 text-primary font-medium">{feat.geometry?.type || 'Table'}</div>
+
+                  {/* Timestamp */}
                   <div className="w-28 text-slate-500 text-[9px] font-mono">
                     {feat.properties.timestamp ? new Date(feat.properties.timestamp).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
                   </div>
+
+                  {/* Extra attribute columns */}
                   {extraKeys.map(k => (
                     <div key={k} className="truncate text-slate-400 text-[10px] px-1">
                       {String(feat.properties[k] ?? '')}
                     </div>
                   ))}
+
+                  {/* Actions */}
                   <div className="w-16 flex justify-end" onClick={e => e.stopPropagation()}>
                     <button
                       onClick={() => handleDelete(feat.properties.id)}
@@ -141,6 +144,7 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
           )}
         </div>
 
+        {/* Detail panel for selected feature */}
         {selectedFeature && (
           <div className="border-t border-white/10 bg-black/30 px-4 sm:px-8 py-4 max-h-48 overflow-y-auto custom-scrollbar">
             <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3">Feature Properties</p>
@@ -161,52 +165,6 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
           </div>
         )}
       </div>
-
-      {showExportPanel && (
-        <div className="fixed inset-0 z-[1200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowExportPanel(false)}>
-          <div className="glass w-full max-w-sm rounded-[2rem] border border-white/20 shadow-2xl p-5 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-widest">Export</h3>
-                <p className="text-[9px] text-slate-500 mt-1">Scegli nome, formato, CRS e percorso quando supportato dal browser.</p>
-              </div>
-              <button onClick={() => setShowExportPanel(false)} className="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400 hover:text-white">×</button>
-            </div>
-
-            <label className="block space-y-1">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Nome file</span>
-              <input value={exportOptions.filename} onChange={e => setExportOptions(o => ({ ...o, filename: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary" />
-            </label>
-
-            <label className="block space-y-1">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Estensione</span>
-              <select value={exportOptions.format} onChange={e => setExportOptions(o => ({ ...o, format: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary">
-                <option value="geojson">GeoJSON (.geojson)</option>
-                <option value="json">JSON (.json)</option>
-                <option value="csv">CSV (.csv)</option>
-              </select>
-            </label>
-
-            <label className="block space-y-1">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">CRS export</span>
-              <input list="export-crs-list" value={exportOptions.crs} onChange={e => setExportOptions(o => ({ ...o, crs: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary" />
-              <datalist id="export-crs-list">
-                <option value={projectCrs}>Project CRS</option>
-                <option value="EPSG:4326">WGS84</option>
-                {FALLBACK_CRS.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
-              </datalist>
-            </label>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-[9px] text-slate-400 leading-relaxed">
-              Se disponibile, il browser aprirà il selettore percorso/file. Su mobile o browser non supportati verrà usato il download standard.
-            </div>
-
-            <button onClick={handleExport} className="w-full px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all">
-              Salva / Esporta
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

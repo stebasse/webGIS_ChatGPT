@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
-export default function MapController({ gpsPosition, mapRotation, setMapBearing, setGridScaleMeters, setMap, scaleLock, isFreehandMode, onAddNode }) {
+export default function MapController({ gpsPosition, mapRotation, setMapBearing, setGridScaleMeters, setMap, isFreehandMode, onAddNode }) {
   const map = useMap();
 
   useEffect(() => {
@@ -117,40 +117,6 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       map.setBearing(mapRotation);
     }
   }, [mapRotation, map]);
-
-
-  useEffect(() => {
-    if (!map) return;
-    if (scaleLock?.locked) {
-      const lockedZoom = Number.isFinite(scaleLock.zoom) ? scaleLock.zoom : map.getZoom();
-      map.scrollWheelZoom.disable();
-      map.touchZoom.disable();
-      map.doubleClickZoom.disable();
-      map.boxZoom.disable();
-      map.keyboard.disable();
-
-      const keepZoomLocked = () => {
-        if (map.getZoom() !== lockedZoom) {
-          map.setZoom(lockedZoom, { animate: false });
-        }
-      };
-      map.on('zoomend', keepZoomLocked);
-      return () => {
-        map.off('zoomend', keepZoomLocked);
-        map.scrollWheelZoom.enable();
-        map.touchZoom.enable();
-        map.doubleClickZoom.enable();
-        map.boxZoom.enable();
-        map.keyboard.enable();
-      };
-    }
-
-    map.scrollWheelZoom.enable();
-    map.touchZoom.enable();
-    map.doubleClickZoom.enable();
-    map.boxZoom.enable();
-    map.keyboard.enable();
-  }, [map, scaleLock]);
 
   return null;
 }

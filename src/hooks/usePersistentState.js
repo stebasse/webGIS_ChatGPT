@@ -1,38 +1,36 @@
 import { useState, useEffect } from 'react';
 
-function sanitizeValue(parsed, initialValue) {
-  // Array states must remain arrays. Old/corrupt localStorage values used to
-  // crash the app at startup with e.g. layers.find is not a function.
-  if (Array.isArray(initialValue)) {
-    return Array.isArray(parsed) ? parsed : initialValue;
-  }
-
-  // Object states are merged with defaults so new settings added in later
-  // versions always exist, while preserving the user's stored values.
+function mergeDefaults(defaultValue, parsedValue) {
   if (
-    initialValue &&
-    typeof initialValue === 'object' &&
-    !Array.isArray(initialValue)
+    defaultValue &&
+    parsedValue &&
+    typeof defaultValue === 'object' &&
+    typeof parsedValue === 'object' &&
+    !Array.isArray(defaultValue) &&
+    !Array.isArray(parsedValue)
   ) {
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? { ...initialValue, ...parsed }
-      : initialValue;
+    return {
+      ...defaultValue,
+      ...parsedValue,
+    };
   }
 
-  // Primitive states must keep their primitive type when possible.
-  if (typeof parsed === typeof initialValue) return parsed;
-  return initialValue;
+  return parsedValue ?? defaultValue;
 }
 
 export function usePersistentState(key, initialValue) {
   const [state, setState] = useState(() => {
     try {
       const saved = localStorage.getItem(key);
-      if (saved === null || saved === undefined) return initialValue;
-      return sanitizeValue(JSON.parse(saved), initialValue);
+      if (!saved) return initialValue;
+
+      const parsed = JSON.parse(saved);
+      return mergeDefaults(initialValue, parsed);
     } catch (error) {
-      console.warn(`Invalid localStorage value for ${key}; resetting to default.`, error);
-      try { localStorage.removeItem(key); } catch { /* ignore */ }
+      console.warn(`Invalid localStorage value for ${key}. Resetting it.`, error);
+      try {
+        localStorage.removeItem(key);
+      } catch {}
       return initialValue;
     }
   });
@@ -41,7 +39,7 @@ export function usePersistentState(key, initialValue) {
     try {
       localStorage.setItem(key, JSON.stringify(state));
     } catch (error) {
-      console.warn(`Unable to persist ${key}.`, error);
+      console.warn(`Unable to persist ${key} to localStorage.`, error);
     }
   }, [key, state]);
 

@@ -1,7 +1,5 @@
 import { useState } from 'react';
 
-const normalizeLayerCrs = (v) => { const clean = String(v || 'EPSG:4326').trim().toUpperCase(); return /^\d+$/.test(clean) ? `EPSG:${clean}` : clean; };
-
 const COLOR_OPTIONS = [
   { label: 'Sky Blue', hex: '#0ea5e9', tw: 'bg-sky-500' },
   { label: 'Emerald', hex: '#10b981', tw: 'bg-emerald-500' },
@@ -215,11 +213,6 @@ export default function LayersView({
     setLayers(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
   };
 
-  const updateLayerCrs = (id, value) => {
-    const crs = normalizeLayerCrs(value);
-    setLayers(prev => prev.map(l => l.id === id ? { ...l, crs, sourceCrs: crs } : l));
-  };
-
   return (
     <div className="w-full max-w-4xl h-full mx-auto flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       {symbologyLayer && (
@@ -234,7 +227,7 @@ export default function LayersView({
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Table of Contents</h2>
       </div>
 
-      <div className="flex-1 w-full glass bg-slate-950/95 light-theme:bg-white/95 rounded-[2rem] sm:rounded-[2.5rem] border border-white/15 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
         {/* Header */}
         <div className="px-4 sm:px-8 py-3 sm:py-4 border-b border-white/5 bg-white/5 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Manage Layers</p>
@@ -308,17 +301,6 @@ export default function LayersView({
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
-                </div>
-
-                <div className="px-2 flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                  <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">Layer CRS</span>
-                  <input
-                    defaultValue={layer.crs || layer.sourceCrs || 'EPSG:4326'}
-                    onBlur={(e) => updateLayerCrs(layer.id, e.target.value)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                    className="flex-1 bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-[9px] text-slate-300 outline-none focus:border-primary font-mono"
-                    title="Layer CRS. Press Enter or leave field to save."
-                  />
                 </div>
 
                 {/* Categorized symbology badge */}

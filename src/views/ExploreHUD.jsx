@@ -7,9 +7,6 @@ export default function ExploreHUD({
   drawingMode, finishDrawing,
   mapBearing, setMapBearing,
   gridScaleMeters,
-  scaleLock,
-  toggleScaleLock,
-  applyManualScale,
   onAddFeature,
   layers, selectedLayerId, units,
   map,
@@ -18,17 +15,9 @@ export default function ExploreHUD({
   measureCoordinates,
   measureResult,
   toggleMeasureMode,
-  clearMeasure,
-  gpsCoordinateLabel,
-  projectCrs,
-  projectCrsInfo,
-  onGoToCoordinate
+  clearMeasure
 }) {
   const [gridPosition, setGridPosition] = useState('center');
-  const [showGoTo, setShowGoTo] = useState(false);
-  const [goToValues, setGoToValues] = useState({ x: '', y: '', crs: projectCrs || 'EPSG:4326' });
-  const [showScaleInput, setShowScaleInput] = useState(false);
-  const [scaleValue, setScaleValue] = useState('1:10000');
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -118,46 +107,13 @@ export default function ExploreHUD({
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
-        {/* Go To coordinates */}
-        <button
-          onClick={() => { setShowGoTo(v => !v); setGoToValues(prev => ({ ...prev, crs: projectCrs || prev.crs || 'EPSG:4326' })); }}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${showGoTo ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title="Go To Coordinates"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l7 19-7-4-7 4 7-19z" /></svg>
-          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Go To</span>
-        </button>
-
-        <div className="w-px h-3 bg-white/10 flex-shrink-0" />
-
-
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Scale indicator - Fixed to Grid Size (128px) */}
-          <div className="flex flex-col gap-0.5 w-[128px]">
-            <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
-              <div className="w-0.5 h-full bg-white/40" />
-              <div className="w-0.5 h-full bg-white/40" />
-            </div>
-            <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">{formatDistance(gridScaleMeters)}</span>
+        {/* Scale indicator - Fixed to Grid Size (128px) */}
+        <div className="flex flex-col gap-0.5 flex-shrink-0 w-[128px]">
+          <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
+            <div className="w-0.5 h-full bg-white/40" />
+            <div className="w-0.5 h-full bg-white/40" />
           </div>
-          <button
-            onClick={() => {
-              if (scaleLock?.locked) {
-                toggleScaleLock?.();
-                setShowScaleInput(false);
-              } else {
-                setShowScaleInput(v => !v);
-              }
-            }}
-            className={`flex items-center justify-center w-7 h-7 rounded-xl border transition-all ${scaleLock?.locked ? 'bg-emerald-400/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,.25)]' : showScaleInput ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-            title={scaleLock?.locked ? 'Unlock map scale' : 'Set and lock map scale'}
-          >
-            {scaleLock?.locked ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4" /></svg>
-            ) : (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 017.874-1M6 11h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2z" /></svg>
-            )}
-          </button>
+          <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">{formatDistance(gridScaleMeters)}</span>
         </div>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
@@ -193,58 +149,6 @@ export default function ExploreHUD({
           </button>
         </div>
       </div>
-
-
-      {showScaleInput && !scaleLock?.locked && (
-        <div className="absolute top-[calc(4.25rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,300px)] space-y-3">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-[9px] font-bold text-white uppercase tracking-widest">Lock Scale</p>
-              <p className="text-[8px] text-slate-500">Example: 1:10000</p>
-            </div>
-            <button onClick={() => setShowScaleInput(false)} className="text-slate-500 hover:text-white">×</button>
-          </div>
-          <input
-            value={scaleValue}
-            onChange={e => setScaleValue(e.target.value)}
-            placeholder="1:10000"
-            className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary"
-          />
-          <button
-            onClick={() => { if (applyManualScale?.(scaleValue)) setShowScaleInput(false); }}
-            className="w-full px-4 py-2 rounded-xl bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all"
-          >
-            Apply & Lock
-          </button>
-        </div>
-      )}
-
-      {showGoTo && (
-        <div className="absolute top-[calc(4.25rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-[9px] font-bold text-white uppercase tracking-widest">Go To Coordinates</p>
-              <p className="text-[8px] text-slate-500">Input coordinates in selected CRS</p>
-            </div>
-            <button onClick={() => setShowGoTo(false)} className="text-slate-500 hover:text-white">×</button>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <input value={goToValues.x} onChange={e => setGoToValues(v => ({ ...v, x: e.target.value }))} placeholder="E / Lon" className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
-            <input value={goToValues.y} onChange={e => setGoToValues(v => ({ ...v, y: e.target.value }))} placeholder="N / Lat" className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
-          </div>
-          <input value={goToValues.crs} onChange={e => setGoToValues(v => ({ ...v, crs: e.target.value }))} placeholder="EPSG:32632" className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
-          <button onClick={() => onGoToCoordinate?.({ x: goToValues.x, y: goToValues.y, crs: goToValues.crs })} className="w-full px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Center Map</button>
-        </div>
-      )}
-
-      {/* Project CRS badge / lightweight CRS grid label */}
-      {projectCrs && (
-        <div className="absolute top-[calc(8.2rem+env(safe-area-inset-top,0px))] right-4 sm:right-6 pointer-events-none">
-          <div className="glass px-2.5 py-1.5 rounded-xl border border-white/10 text-[8px] font-mono text-primary/80 shadow-xl">
-            CRS {projectCrs}{projectCrsInfo?.projected ? ' · projected grid' : ' · geographic'}
-          </div>
-        </div>
-      )}
 
       {/* ── Active layer indicator ───────────────────────────────────────── */}
       <div className="absolute top-[calc(5rem+env(safe-area-inset-top,0px))] sm:top-6 right-4 sm:right-6 pointer-events-auto">
@@ -302,8 +206,8 @@ export default function ExploreHUD({
       {gpsState.position && (
         <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-none">
           <div className="glass px-2.5 py-1.5 rounded-xl text-[8px] font-mono text-emerald-400 shadow-xl border border-emerald-500/20">
-            <div>{gpsCoordinateLabel || `${gpsState.position[1].toFixed(6)}, ${gpsState.position[0].toFixed(6)}`}</div>
-            {gpsState.accuracy && <div className="text-white/30 text-[7px]">±{gpsState.accuracy.toFixed(1)} m · {projectCrs || 'EPSG:4326'}</div>}
+            <div>{gpsState.position[1].toFixed(6)}, {gpsState.position[0].toFixed(6)}</div>
+            {gpsState.accuracy && <div className="text-white/30 text-[7px]">±{gpsState.accuracy.toFixed(1)} m</div>}
           </div>
         </div>
       )}
