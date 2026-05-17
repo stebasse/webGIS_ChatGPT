@@ -95,15 +95,43 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
   }, [map, isFreehandMode, onAddNode]);
 
 
+  const originalZoomLimits = useRef(null);
+
   useEffect(() => {
     if (!map) return;
+
     const controls = [map.scrollWheelZoom, map.doubleClickZoom, map.boxZoom, map.keyboard, map.touchZoom];
+
     if (scaleLocked) {
+      if (!originalZoomLimits.current) {
+        originalZoomLimits.current = {
+          minZoom: map.getMinZoom?.(),
+          maxZoom: map.getMaxZoom?.()
+        };
+      }
+
+      const lockedZoom = map.getZoom();
       controls.forEach(c => c?.disable?.());
+      map.setMinZoom?.(lockedZoom);
+      map.setMaxZoom?.(lockedZoom);
     } else {
+      const limits = originalZoomLimits.current;
       controls.forEach(c => c?.enable?.());
+      if (limits) {
+        if (Number.isFinite(limits.minZoom)) map.setMinZoom?.(limits.minZoom);
+        if (Number.isFinite(limits.maxZoom)) map.setMaxZoom?.(limits.maxZoom);
+      }
+      originalZoomLimits.current = null;
     }
-    return () => controls.forEach(c => c?.enable?.());
+
+    return () => {
+      controls.forEach(c => c?.enable?.());
+      const limits = originalZoomLimits.current;
+      if (limits) {
+        if (Number.isFinite(limits.minZoom)) map.setMinZoom?.(limits.minZoom);
+        if (Number.isFinite(limits.maxZoom)) map.setMaxZoom?.(limits.maxZoom);
+      }
+    };
   }, [map, scaleLocked]);
 
   useMapEvents({
