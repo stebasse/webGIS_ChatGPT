@@ -41,6 +41,20 @@ const DEFAULT_SETTINGS = {
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 
+const createGoToIcon = () => L.divIcon({
+  className: '',
+  html: `
+    <div style="position:relative;width:34px;height:34px;transform:translate(-17px,-34px);">
+      <div style="position:absolute;left:7px;top:1px;width:20px;height:20px;border-radius:9999px;background:#f59e0b;border:3px solid white;box-shadow:0 0 18px rgba(245,158,11,.85);"></div>
+      <div style="position:absolute;left:14px;top:20px;width:6px;height:14px;background:#f59e0b;clip-path:polygon(50% 100%,0 0,100% 0);filter:drop-shadow(0 2px 4px rgba(0,0,0,.45));"></div>
+      <div style="position:absolute;left:12px;top:6px;width:10px;height:10px;border-radius:9999px;background:#0f172a;border:2px solid white;"></div>
+    </div>
+  `,
+  iconSize: [34, 34],
+  iconAnchor: [17, 34],
+});
+
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
   const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(false);
@@ -70,6 +84,7 @@ export default function App() {
   const [gpsState, setGpsState] = useState({ position: null, accuracy: null, tracking: false });
   const [mapBearing, setMapBearing] = useState(0);
   const [gridScaleMeters, setGridScaleMeters] = useState(100);
+  const [scaleLock, setScaleLock] = useState({ locked: false, zoom: null });
   const [drawingMode, setDrawingMode] = useState(false);  // false | 'Line' | 'Polygon'
   const [draftCoordinates, setDraftCoordinates] = useState([]);
   const [layerFilter, setLayerFilter] = useState('');
@@ -125,6 +140,15 @@ export default function App() {
   }, []);
 
   const deviceHeading = useDeviceCompass();
+  const goToIcon = createGoToIcon();
+
+  const toggleScaleLock = useCallback(() => {
+    setScaleLock(prev => {
+      if (prev.locked) return { locked: false, zoom: null };
+      const zoom = map?.getZoom?.() ?? null;
+      return { locked: true, zoom };
+    });
+  }, [map]);
   const projectCrs = settings.crsOverride ? (settings.projectCrs || 'EPSG:4326') : 'EPSG:4326';
   const projectCrsInfo = getCrsInfo(projectCrs);
 
@@ -704,6 +728,7 @@ export default function App() {
             mapRotation={settings.compassMode ? deviceHeading : mapBearing}
             setMapBearing={setMapBearing}
             setGridScaleMeters={setGridScaleMeters}
+            scaleLock={scaleLock}
             isFreehandMode={isFreehandMode && !!drawingMode}
             onAddNode={handleAddNode}
           />
@@ -713,7 +738,7 @@ export default function App() {
             <Marker position={[gpsState.position[1], gpsState.position[0]]} icon={gpsIcon} />
           )}
           {goToMarker && (
-            <Marker position={[goToMarker[1], goToMarker[0]]} />
+            <Marker position={[goToMarker[1], goToMarker[0]]} icon={goToIcon} zIndexOffset={1000} />
           )}
 
           {collectedPoints.map(feature => {
@@ -803,6 +828,8 @@ export default function App() {
             drawingMode={drawingMode} finishDrawing={finishDrawing}
             mapBearing={mapBearing} setMapBearing={setMapBearing}
             gridScaleMeters={gridScaleMeters}
+            scaleLock={scaleLock}
+            toggleScaleLock={toggleScaleLock}
             onAddFeature={collectPoint}
             layers={layers}
             selectedLayerId={selectedLayerId}
