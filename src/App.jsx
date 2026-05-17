@@ -21,7 +21,7 @@ import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
 import OnboardingGuide from './components/OnboardingGuide';
-import { transformCoord, transformFeature, formatCoordinate, distanceInCrs, areaInCrs, getCrsInfo } from './services/crsService';
+import { transformCoord, transformFeature, transformGeometry, formatCoordinate, distanceInCrs, areaInCrs, getCrsInfo, getCrsCode, downloadTextFile, prjTextForCRS } from './services/crsService';
 
 // Resolve a feature's display color given its layer and symbology rules
 function resolveFeatureColor(feature, layer) {
@@ -84,6 +84,7 @@ export default function App() {
   const [newPopupField, setNewPopupField] = useState({ name: '', type: 'String' });
   const [measureMode, setMeasureMode] = useState(false); // false | 'Distance' | 'Area'
   const [measureCoordinates, setMeasureCoordinates] = useState([]);
+  const [goToMarker, setGoToMarker] = useState(null);
 
   // Apply theme class to <html>; preview draft theme immediately while Settings is open.
   useEffect(() => {
@@ -126,6 +127,28 @@ export default function App() {
   const deviceHeading = useDeviceCompass();
   const projectCrs = settings.crsOverride ? (settings.projectCrs || 'EPSG:4326') : 'EPSG:4326';
   const projectCrsInfo = getCrsInfo(projectCrs);
+
+  // Ensure every layer has CRS metadata. Existing user data remains untouched.
+  useEffect(() => {
+    setLayers(prev => prev.map(layer => ({
+      ...layer,
+      crs: getCrsCode(layer.crs || layer.sourceCrs || 'EPSG:4326'),
+      sourceCrs: getCrsCode(layer.sourceCrs || layer.crs || 'EPSG:4326'),
+      displayCrs: projectCrs,
+    })));
+  }, [projectCrs, setLayers]);
+
+  const getFeatureSourceCrs = useCallback((feature, layer) => getCrsCode(feature?.properties?.sourceCrs || layer?.sourceCrs || layer?.crs || 'EPSG:4326'), []);
+
+  const geometryToWgs84 = useCallback((feature, layer) => {
+    const source = getFeatureSourceCrs(feature, layer);
+    return source === 'EPSG:4326' ? feature.geometry : transformGeometry(feature.geometry, source, 'EPSG:4326');
+  }, [getFeatureSourceCrs]);
+
+  const coordinatesToLayerCrs = useCallback((coords, layer) => {
+    const layerCrs = getCrsCode(layer?.crs || layer?.sourceCrs || 'EPSG:4326');
+    return layerCrs === 'EPSG:4326' ? coords : transformCoord(coords, 'EPSG:4326', layerCrs);
+  }, []);
 
   useEffect(() => {
     if (activeTab !== 'explore') setIsTocSidebarOpen(false);
@@ -297,6 +320,17 @@ export default function App() {
     setMeasureCoordinates([]);
   };
 
+  const goToCoordinate = ({ x, y, crs }) => {
+    const sourceCrs = getCrsCode(crs || projectCrs);
+    const lngLat = sourceCrs === 'EPSG:4326' ? [Number(x), Number(y)] : transformCoord([Number(x), Number(y)], sourceCrs, 'EPSG:4326');
+    if (!Number.isFinite(lngLat?.[0]) || !Number.isFinite(lngLat?.[1])) {
+      alert('Coordinate non valide o CRS non trasformabile.');
+      return;
+    }
+    setGoToMarker(lngLat);
+    map?.setView([lngLat[1], lngLat[0]], Math.max(map.getZoom(), 16));
+  };
+
   // ── Map interaction ───────────────────────────────────────────────────────
   const handleAddNode = useCallback((latlng) => {
     if (!latlng) return;
@@ -334,20 +368,23 @@ export default function App() {
       return;
     }
     const layer = layers.find(l => l.id === selectedLayerId);
+    const layerCrs = getCrsCode(layer?.crs || 'EPSG:4326');
+    const storedDraft = draftCoordinates.map(c => coordinatesToLayerCrs(c, layer));
     const newFeature = {
       type: 'Feature',
       properties: {
         id: Date.now(),
         layerId: selectedLayerId,
         layerName: layer?.name || 'Unknown',
+        sourceCrs: layerCrs,
         timestamp: new Date().toISOString(),
         ...(buildDefaultProperties(layer))
       },
       geometry: {
         type: drawingMode === 'Polygon' ? 'Polygon' : 'LineString',
         coordinates: drawingMode === 'Polygon'
-          ? [[...draftCoordinates, draftCoordinates[0]]]
-          : draftCoordinates
+          ? [[...storedDraft, storedDraft[0]]]
+          : storedDraft
       }
     };
     setCollectedPoints(prev => [...prev, newFeature]);
@@ -491,6 +528,7 @@ export default function App() {
       ID: featureId,
       layerId: layer.id,
       layerName: layer.name,
+      sourceCrs: getCrsCode(layer.crs || 'EPSG:4326'),
       timestamp: new Date().toISOString(),
       __draftRow: true,
       ...buildDefaultProperties(layer)
@@ -557,17 +595,20 @@ export default function App() {
         }
       }
 
+      const layerCrs = getCrsCode(activeLayer.crs || 'EPSG:4326');
+      const storedPosition = coordinatesToLayerCrs(position, activeLayer);
       const newPoint = {
         type: 'Feature',
         properties: {
           id: Date.now(),
           layerId: selectedLayerId,
           layerName: activeLayer.name,
+          sourceCrs: layerCrs,
           timestamp: new Date().toISOString(),
           accuracy: accuracy,
           ...buildDefaultProperties(activeLayer)
         },
-        geometry: { type: 'Point', coordinates: position }
+        geometry: { type: 'Point', coordinates: storedPosition }
       };
       setCollectedPoints(prev => [...prev, newPoint]);
       // Brief visual feedback without blocking alert
@@ -591,26 +632,34 @@ export default function App() {
       alert('Nessuna feature da esportare.');
       return;
     }
-    const exportCrs = settings.crsOverride ? projectCrs : 'EPSG:4326';
-    const exportFeatures = exportCrs === 'EPSG:4326'
-      ? features
-      : features.map(f => transformFeature(f, 'EPSG:4326', exportCrs));
+
+    const layer = layerIdFilter ? layers.find(l => l.id === layerIdFilter) : null;
+    const choice = window.prompt(
+      'Export CRS: project, layer, wgs84, or custom EPSG code',
+      'project'
+    ) || 'project';
+    let exportCrs = projectCrs;
+    if (choice.toLowerCase() === 'wgs84') exportCrs = 'EPSG:4326';
+    else if (choice.toLowerCase() === 'layer' && layer) exportCrs = getCrsCode(layer.crs || layer.sourceCrs || 'EPSG:4326');
+    else if (choice.toLowerCase() === 'layer' && !layer) exportCrs = projectCrs;
+    else if (choice.toLowerCase() !== 'project') exportCrs = getCrsCode(choice);
+
+    const exportFeatures = features.map(f => {
+      const srcLayer = layers.find(l => l.id === f.properties.layerId);
+      const sourceCrs = getFeatureSourceCrs(f, srcLayer);
+      return sourceCrs === exportCrs ? f : transformFeature(f, sourceCrs, exportCrs);
+    });
+
     const geojson = {
       type: 'FeatureCollection',
-      name: layerIdFilter ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer') : 'all_layers',
+      name: layerIdFilter ? (layer?.name || 'layer') : 'all_layers',
       crs: { type: 'name', properties: { name: exportCrs } },
       features: exportFeatures
     };
-    const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const layerName = layerIdFilter
-      ? (layers.find(l => l.id === layerIdFilter)?.name || 'layer')
-      : 'all_layers';
-    a.download = `${layerName}_${exportCrs.replace(':','')}_${new Date().toISOString().split('T')[0]}.geojson`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const layerName = layerIdFilter ? (layer?.name || 'layer') : 'all_layers';
+    const baseName = `${layerName}_${exportCrs.replace(':','')}_${new Date().toISOString().split('T')[0]}`;
+    downloadTextFile(`${baseName}.geojson`, JSON.stringify(geojson, null, 2), 'application/geo+json');
+    downloadTextFile(`${baseName}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
   };
 
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -663,11 +712,16 @@ export default function App() {
           {gpsState.position && (
             <Marker position={[gpsState.position[1], gpsState.position[0]]} icon={gpsIcon} />
           )}
+          {goToMarker && (
+            <Marker position={[goToMarker[1], goToMarker[0]]} />
+          )}
 
           {collectedPoints.map(feature => {
             const layer = layers.find(l => l.id === feature.properties.layerId);
             if (!layer || !layer.active || !feature.geometry) return null;
             const color = resolveFeatureColor(feature, layer);
+            const displayGeometry = geometryToWgs84(feature, layer);
+            if (!displayGeometry) return null;
             const eventHandlers = {
               click: (e) => {
                 L.DomEvent.stopPropagation(e);
@@ -679,32 +733,32 @@ export default function App() {
               }
             };
 
-            if (feature.geometry.type === 'Point') {
+            if (displayGeometry.type === 'Point') {
               return (
                 <CircleMarker
                   key={feature.properties.id}
-                  center={[feature.geometry.coordinates[1], feature.geometry.coordinates[0]]}
+                  center={[displayGeometry.coordinates[1], displayGeometry.coordinates[0]]}
                   radius={7}
                   pathOptions={{ color, fillColor: color, fillOpacity: 0.85, weight: 2 }}
                   eventHandlers={eventHandlers}
                 />
               );
             }
-            if (feature.geometry.type === 'LineString') {
+            if (displayGeometry.type === 'LineString') {
               return (
                 <Polyline
                   key={feature.properties.id}
-                  positions={feature.geometry.coordinates.map(c => [c[1], c[0]])}
+                  positions={displayGeometry.coordinates.map(c => [c[1], c[0]])}
                   pathOptions={{ color, weight: 4 }}
                   eventHandlers={eventHandlers}
                 />
               );
             }
-            if (feature.geometry.type === 'Polygon') {
+            if (displayGeometry.type === 'Polygon') {
               return (
                 <Polygon
                   key={feature.properties.id}
-                  positions={feature.geometry.coordinates[0].map(c => [c[1], c[0]])}
+                  positions={displayGeometry.coordinates[0].map(c => [c[1], c[0]])}
                   pathOptions={{ color, fillColor: color, fillOpacity: 0.35, weight: 2 }}
                   eventHandlers={eventHandlers}
                 />
@@ -764,6 +818,7 @@ export default function App() {
             gpsCoordinateLabel={gpsState.position ? formatCoordinate(transformCoord(gpsState.position, 'EPSG:4326', projectCrs), projectCrs) : ''}
             projectCrs={projectCrs}
             projectCrsInfo={projectCrsInfo}
+            onGoToCoordinate={goToCoordinate}
           />
         )}
 
@@ -776,6 +831,7 @@ export default function App() {
             newLayer={newLayer} setNewLayer={setNewLayer}
             setActiveTab={setActiveTab} layers={layers} setLayers={setLayers}
             setSelectedLayerId={setSelectedLayerId}
+            projectCrs={projectCrs}
           />
         )}
 
@@ -785,6 +841,7 @@ export default function App() {
             setCollectedPoints={setCollectedPoints}
             setSelectedLayerId={setSelectedLayerId}
             setActiveTab={setActiveTab}
+            projectCrs={projectCrs}
           />
         )}
 
