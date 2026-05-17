@@ -9,6 +9,7 @@ export default function ExploreHUD({
   gridScaleMeters,
   scaleLock,
   toggleScaleLock,
+  applyManualScale,
   onAddFeature,
   layers, selectedLayerId, units,
   map,
@@ -26,6 +27,8 @@ export default function ExploreHUD({
   const [gridPosition, setGridPosition] = useState('center');
   const [showGoTo, setShowGoTo] = useState(false);
   const [goToValues, setGoToValues] = useState({ x: '', y: '', crs: projectCrs || 'EPSG:4326' });
+  const [showScaleInput, setShowScaleInput] = useState(false);
+  const [scaleValue, setScaleValue] = useState('1:10000');
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -138,9 +141,16 @@ export default function ExploreHUD({
             <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">{formatDistance(gridScaleMeters)}</span>
           </div>
           <button
-            onClick={toggleScaleLock}
-            className={`flex items-center justify-center w-7 h-7 rounded-xl border transition-all ${scaleLock?.locked ? 'bg-emerald-400/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,.25)]' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-            title={scaleLock?.locked ? 'Unlock map scale' : 'Lock current map scale'}
+            onClick={() => {
+              if (scaleLock?.locked) {
+                toggleScaleLock?.();
+                setShowScaleInput(false);
+              } else {
+                setShowScaleInput(v => !v);
+              }
+            }}
+            className={`flex items-center justify-center w-7 h-7 rounded-xl border transition-all ${scaleLock?.locked ? 'bg-emerald-400/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,.25)]' : showScaleInput ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+            title={scaleLock?.locked ? 'Unlock map scale' : 'Set and lock map scale'}
           >
             {scaleLock?.locked ? (
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4" /></svg>
@@ -183,6 +193,31 @@ export default function ExploreHUD({
           </button>
         </div>
       </div>
+
+
+      {showScaleInput && !scaleLock?.locked && (
+        <div className="absolute top-[calc(4.25rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,300px)] space-y-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-[9px] font-bold text-white uppercase tracking-widest">Lock Scale</p>
+              <p className="text-[8px] text-slate-500">Example: 1:10000</p>
+            </div>
+            <button onClick={() => setShowScaleInput(false)} className="text-slate-500 hover:text-white">×</button>
+          </div>
+          <input
+            value={scaleValue}
+            onChange={e => setScaleValue(e.target.value)}
+            placeholder="1:10000"
+            className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary"
+          />
+          <button
+            onClick={() => { if (applyManualScale?.(scaleValue)) setShowScaleInput(false); }}
+            className="w-full px-4 py-2 rounded-xl bg-emerald-400/20 border border-emerald-400/30 text-emerald-300 text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all"
+          >
+            Apply & Lock
+          </button>
+        </div>
+      )}
 
       {showGoTo && (
         <div className="absolute top-[calc(4.25rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
