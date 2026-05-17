@@ -351,10 +351,18 @@ export default function App() {
     }
     const center = map.getCenter();
     const zoom = Math.log2(Math.cos(center.lat * Math.PI / 180) * 2 * Math.PI * 6378137 / (256 * denominator * 0.00028));
-    const safeZoom = Math.max(map.getMinZoom?.() ?? 0, Math.min(map.getMaxZoom?.() ?? 22, Math.round(zoom)));
-    map.setZoom(safeZoom);
+    const originalMin = Number.isFinite(map.options?.minZoom) ? map.options.minZoom : 0;
+    const originalMax = Number.isFinite(map.options?.maxZoom) ? map.options.maxZoom : 22;
+    const safeZoom = Math.max(originalMin, Math.min(originalMax, Math.round(zoom)));
+
+    // Release a previous lock before changing zoom, then re-lock at the requested scale.
+    map.setMinZoom?.(originalMin);
+    map.setMaxZoom?.(originalMax);
+    setScaleLocked(false);
+    map.setZoom(safeZoom, { animate: false });
+    setGridScaleMeters(prev => prev); // keep metric scale visible while the map controller recalculates it
     setLockedScaleDenominator(denominator);
-    setScaleLocked(true);
+    window.setTimeout(() => setScaleLocked(true), 0);
   }, [map]);
 
   const toggleScaleLock = useCallback(() => {
@@ -726,29 +734,44 @@ export default function App() {
       filename = `${filenameBase}.${extension === 'json' ? 'json' : 'geojson'}`;
     }
 
+    const writeFileToDirectory = async (directoryHandle, fileName, fileContent, fileMime) => {
+      const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(new Blob([fileContent], { type: fileMime }));
+      await writable.close();
+    };
+
     try {
-      if (window.showSaveFilePicker) {
-        const ext = filename.split('.').pop();
+      if (options.directoryHandle) {
+        await writeFileToDirectory(options.directoryHandle, filename, content, mime);
+        if (extension !== 'csv') {
+          await writeFileToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
+      } else if (window.showSaveFilePicker) {
         const handle = await window.showSaveFilePicker({
           suggestedName: filename,
-          startIn: 'downloads',
-          excludeAcceptAllOption: false,
-          types: [{ description: 'GIS export', accept: { 'application/octet-stream': [`.${ext}`] } }]
+          types: [{ description: 'GIS export', accept: { [mime]: [`.${filename.split('.').pop()}`] } }]
         });
         const writable = await handle.createWritable();
         await writable.write(new Blob([content], { type: mime }));
         await writable.close();
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
       } else {
         downloadTextFile(filename, content, mime);
-      }
-      if (extension !== 'csv') {
-        downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
       }
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.error(err);
         alert('Export non riuscito. Uso download standard.');
         downloadTextFile(filename, content, mime);
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
       }
     }
   };

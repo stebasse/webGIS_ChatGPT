@@ -28,6 +28,8 @@ export default function ExploreHUD({
   const [gridPosition, setGridPosition] = useState('center');
   const [showGoTo, setShowGoTo] = useState(false);
   const [goToValues, setGoToValues] = useState({ x: '', y: '', crs: projectCrs || 'EPSG:4326' });
+  const [showScaleInput, setShowScaleInput] = useState(false);
+  const [scaleInputValue, setScaleInputValue] = useState('1:10000');
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -74,8 +76,32 @@ export default function ExploreHUD({
         />
       )}
 
+      {/* ── Top status badges above toolbar ─────────────────────────────── */}
+      <div className="fixed top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-6 flex items-start justify-between gap-3 pointer-events-none z-[90]">
+        <div className="min-w-0 max-w-[48vw] sm:max-w-xs">
+          {activeLayer ? (
+            <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 flex items-center gap-2 shadow-2xl">
+              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeLayer.colorHex || '#0ea5e9' }} />
+              <div className="min-w-0">
+                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Active layer</div>
+                <div className="text-[9px] font-bold text-white uppercase tracking-widest truncate">{activeLayer.name}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-amber-500/40 flex items-center gap-2 shadow-2xl">
+              <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+              <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">No layer</span>
+            </div>
+          )}
+        </div>
+        <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl max-w-[42vw] sm:max-w-xs">
+          <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Project CRS</div>
+          <div className="text-[9px] font-mono font-bold text-primary truncate">{projectCrs || 'EPSG:4326'}</div>
+        </div>
+      </div>
+
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="absolute top-[calc(1rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
+      <div className="absolute top-[calc(3.8rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
@@ -146,11 +172,18 @@ export default function ExploreHUD({
             )}
           </div>
           <button
-            onClick={toggleScaleLock}
-            onContextMenu={(e) => { e.preventDefault(); const v = window.prompt('Inserisci scala, es. 1:10000', lockedScaleDenominator ? `1:${lockedScaleDenominator}` : '1:10000'); if (v) setManualScale?.(v); }}
-            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 ${scaleLocked ? 'bg-primary/25 border-primary text-primary shadow-[0_0_14px_rgba(0,191,255,0.25)]' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare. Tieni premuto/click destro per impostare una nuova scala.' : 'Fissa scala manuale, es. 1:10000'}
-            aria-label={scaleLocked ? 'Sblocca scala mappa' : 'Blocca scala mappa'}
+            onClick={() => {
+              if (scaleLocked) {
+                toggleScaleLock?.();
+                setShowScaleInput(false);
+              } else {
+                setScaleInputValue(lockedScaleDenominator ? `1:${lockedScaleDenominator}` : '1:10000');
+                setShowScaleInput(v => !v);
+              }
+            }}
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 ${scaleLocked ? 'bg-primary/25 border-primary text-primary shadow-[0_0_14px_rgba(0,191,255,0.25)]' : showScaleInput ? 'bg-primary/15 border-primary/70 text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare.' : 'Imposta e blocca scala, es. 1:10000'}
+            aria-label={scaleLocked ? 'Sblocca scala mappa' : 'Imposta scala mappa'}
           >
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {scaleLocked ? (
@@ -197,7 +230,7 @@ export default function ExploreHUD({
       </div>
 
       {showGoTo && (
-        <div className="absolute top-[calc(4.25rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
+        <div className="absolute top-[calc(7.1rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-[9px] font-bold text-white uppercase tracking-widest">Go To Coordinates</p>
@@ -214,30 +247,28 @@ export default function ExploreHUD({
         </div>
       )}
 
-      {/* Project CRS badge / lightweight CRS grid label */}
-      {projectCrs && (
-        <div className="absolute top-[calc(0.5rem+env(safe-area-inset-top,0px))] right-4 sm:right-6 pointer-events-none">
-          <div className="glass px-2.5 py-1.5 rounded-xl border border-white/10 text-[8px] font-mono text-primary/80 shadow-xl">
-            CRS {projectCrs}{projectCrsInfo?.projected ? ' · projected grid' : ' · geographic'}
+      {showScaleInput && !scaleLocked && (
+        <div className="absolute top-[calc(8.1rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
+          <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">Blocca scala</div>
+          <div className="flex items-center gap-2">
+            <input
+              value={scaleInputValue}
+              onChange={(e) => setScaleInputValue(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { setManualScale?.(scaleInputValue); setShowScaleInput(false); } }}
+              placeholder="1:10000"
+              className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary"
+            />
+            <button
+              onClick={() => { setManualScale?.(scaleInputValue); setShowScaleInput(false); }}
+              className="px-3 py-2 rounded-xl bg-primary text-white text-[9px] font-bold uppercase tracking-widest"
+            >
+              Lock
+            </button>
           </div>
+          <p className="mt-2 text-[8px] text-white/40 leading-snug">La distanza della scala resta visibile; zoom e pinch sono bloccati fino allo sblocco.</p>
         </div>
       )}
 
-      {/* ── Active layer indicator ───────────────────────────────────────── */}
-      <div className="absolute top-[calc(0.5rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto">
-        {activeLayer ? (
-          <div className="glass px-2.5 py-1.5 rounded-[1.2rem] border border-white/15 flex items-center gap-2 shadow-xl">
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: activeLayer.colorHex || '#0ea5e9' }} />
-            <span className="text-[8px] font-bold text-white uppercase tracking-widest max-w-[80px] sm:max-w-[120px] truncate">{activeLayer.name}</span>
-            <span className="text-[7px] text-slate-500 uppercase hidden xs:inline">{activeLayer.type.replace('Vector - ', '')}</span>
-          </div>
-        ) : (
-          <div className="glass px-2.5 py-1.5 rounded-[1.2rem] border border-amber-500/30 bg-amber-500/10 flex items-center gap-2 shadow-xl">
-            <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
-            <span className="text-[8px] font-bold text-amber-400 uppercase tracking-widest">No layer</span>
-          </div>
-        )}
-      </div>
 
       {/* ── Finish Drawing banner ────────────────────────────────────────── */}
       {drawingMode && (
