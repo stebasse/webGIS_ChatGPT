@@ -19,7 +19,11 @@ export default function ExploreHUD({
   gpsCoordinateLabel,
   projectCrs,
   projectCrsInfo,
-  onGoToCoordinate
+  onGoToCoordinate,
+  scaleLocked,
+  lockedScaleDenominator,
+  toggleScaleLock,
+  setManualScale
 }) {
   const [gridPosition, setGridPosition] = useState('center');
   const [showGoTo, setShowGoTo] = useState(false);
@@ -125,13 +129,27 @@ export default function ExploreHUD({
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
-        {/* Scale indicator - Fixed to Grid Size (128px) */}
-        <div className="flex flex-col gap-0.5 flex-shrink-0 w-[128px]">
-          <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
-            <div className="w-0.5 h-full bg-white/40" />
-            <div className="w-0.5 h-full bg-white/40" />
+        {/* Scale indicator + scale lock */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-col gap-0.5 w-[128px]">
+            <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
+              <div className="w-0.5 h-full bg-white/40" />
+              <div className="w-0.5 h-full bg-white/40" />
+            </div>
+            <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">
+              {scaleLocked && lockedScaleDenominator ? `1:${lockedScaleDenominator}` : formatDistance(gridScaleMeters)}
+            </span>
           </div>
-          <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">{formatDistance(gridScaleMeters)}</span>
+          <button
+            onClick={toggleScaleLock}
+            onContextMenu={(e) => { e.preventDefault(); const v = window.prompt('Inserisci scala, es. 1:10000', lockedScaleDenominator ? `1:${lockedScaleDenominator}` : '1:10000'); if (v) setManualScale?.(v); }}
+            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${scaleLocked ? 'bg-primary/25 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare.' : 'Fissa scala manuale'}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4" />
+            </svg>
+          </button>
         </div>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />

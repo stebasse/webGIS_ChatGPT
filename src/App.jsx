@@ -41,6 +41,13 @@ const DEFAULT_SETTINGS = {
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 
+const goToIcon = new L.DivIcon({
+  className: '',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  html: `<div style="width:32px;height:32px;border-radius:9999px;background:#f97316;border:3px solid #fff;box-shadow:0 0 18px rgba(249,115,22,.9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;">+<\/div>`
+});
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('explore');
   const [isTocSidebarOpen, setIsTocSidebarOpen] = useState(false);
@@ -85,6 +92,8 @@ export default function App() {
   const [measureMode, setMeasureMode] = useState(false); // false | 'Distance' | 'Area'
   const [measureCoordinates, setMeasureCoordinates] = useState([]);
   const [goToMarker, setGoToMarker] = useState(null);
+  const [scaleLocked, setScaleLocked] = useState(false);
+  const [lockedScaleDenominator, setLockedScaleDenominator] = useState(null);
 
   // Apply theme class to <html>; preview draft theme immediately while Settings is open.
   useEffect(() => {
@@ -319,6 +328,45 @@ export default function App() {
     setMeasureMode(false);
     setMeasureCoordinates([]);
   };
+
+
+  const estimateScaleDenominator = useCallback(() => {
+    if (!map) return null;
+    const center = map.getCenter();
+    const zoom = map.getZoom();
+    const metersPerPixel = Math.cos(center.lat * Math.PI / 180) * 2 * Math.PI * 6378137 / (256 * Math.pow(2, zoom));
+    return Math.round(metersPerPixel / 0.00028);
+  }, [map]);
+
+  const setManualScale = useCallback((scaleText) => {
+    if (!map) {
+      alert('Mappa non ancora pronta.');
+      return;
+    }
+    const cleaned = String(scaleText || '').replace(/\s/g, '').replace(/^1:/, '');
+    const denominator = Number(cleaned);
+    if (!Number.isFinite(denominator) || denominator <= 0) {
+      alert('Scala non valida. Usa un formato tipo 1:10000.');
+      return;
+    }
+    const center = map.getCenter();
+    const zoom = Math.log2(Math.cos(center.lat * Math.PI / 180) * 2 * Math.PI * 6378137 / (256 * denominator * 0.00028));
+    const safeZoom = Math.max(map.getMinZoom?.() ?? 0, Math.min(map.getMaxZoom?.() ?? 22, Math.round(zoom)));
+    map.setZoom(safeZoom);
+    setLockedScaleDenominator(denominator);
+    setScaleLocked(true);
+  }, [map]);
+
+  const toggleScaleLock = useCallback(() => {
+    if (scaleLocked) {
+      setScaleLocked(false);
+      setLockedScaleDenominator(null);
+      return;
+    }
+    const current = estimateScaleDenominator();
+    const input = window.prompt('Inserisci scala di visualizzazione, es. 1:10000', current ? `1:${current}` : '1:10000');
+    if (input) setManualScale(input);
+  }, [scaleLocked, estimateScaleDenominator, setManualScale]);
 
   const goToCoordinate = ({ x, y, crs }) => {
     const sourceCrs = getCrsCode(crs || projectCrs);
@@ -624,25 +672,26 @@ export default function App() {
   };
 
   // ── Export ────────────────────────────────────────────────────────────────
-  const exportData = (layerIdFilter = null) => {
+  const exportData = async (options = {}) => {
+    const layerIdFilter = typeof options === 'object' ? options.layerId : options;
     const features = layerIdFilter
-      ? collectedPoints.filter(f => f.properties.layerId === layerIdFilter)
+      ? collectedPoints.filter(f => String(f.properties.layerId) === String(layerIdFilter))
       : collectedPoints;
     if (features.length === 0) {
       alert('Nessuna feature da esportare.');
       return;
     }
 
-    const layer = layerIdFilter ? layers.find(l => l.id === layerIdFilter) : null;
-    const choice = window.prompt(
-      'Export CRS: project, layer, wgs84, or custom EPSG code',
-      'project'
-    ) || 'project';
-    let exportCrs = projectCrs;
-    if (choice.toLowerCase() === 'wgs84') exportCrs = 'EPSG:4326';
-    else if (choice.toLowerCase() === 'layer' && layer) exportCrs = getCrsCode(layer.crs || layer.sourceCrs || 'EPSG:4326');
-    else if (choice.toLowerCase() === 'layer' && !layer) exportCrs = projectCrs;
-    else if (choice.toLowerCase() !== 'project') exportCrs = getCrsCode(choice);
+    const layer = layerIdFilter ? layers.find(l => String(l.id) === String(layerIdFilter)) : null;
+    let exportCrs = getCrsCode(options.crs || projectCrs);
+    if (options.crsMode === 'wgs84') exportCrs = 'EPSG:4326';
+    if (options.crsMode === 'layer' && layer) exportCrs = getCrsCode(layer.crs || layer.sourceCrs || 'EPSG:4326');
+    if (options.crsMode === 'project') exportCrs = projectCrs;
+
+    const extension = String(options.extension || 'geojson').replace(/^\./, '').toLowerCase();
+    const layerName = layerIdFilter ? (layer?.name || 'layer') : 'all_layers';
+    const defaultBase = `${layerName}_${exportCrs.replace(':','')}_${new Date().toISOString().split('T')[0]}`;
+    const filenameBase = (options.filename || defaultBase).replace(/\.[^.]+$/, '');
 
     const exportFeatures = features.map(f => {
       const srcLayer = layers.find(l => l.id === f.properties.layerId);
@@ -650,16 +699,55 @@ export default function App() {
       return sourceCrs === exportCrs ? f : transformFeature(f, sourceCrs, exportCrs);
     });
 
-    const geojson = {
-      type: 'FeatureCollection',
-      name: layerIdFilter ? (layer?.name || 'layer') : 'all_layers',
-      crs: { type: 'name', properties: { name: exportCrs } },
-      features: exportFeatures
-    };
-    const layerName = layerIdFilter ? (layer?.name || 'layer') : 'all_layers';
-    const baseName = `${layerName}_${exportCrs.replace(':','')}_${new Date().toISOString().split('T')[0]}`;
-    downloadTextFile(`${baseName}.geojson`, JSON.stringify(geojson, null, 2), 'application/geo+json');
-    downloadTextFile(`${baseName}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+    let content = '';
+    let mime = 'text/plain';
+    let filename = `${filenameBase}.${extension}`;
+
+    if (extension === 'csv') {
+      const keys = [...new Set(exportFeatures.flatMap(f => Object.keys(f.properties || {})))];
+      const header = [...keys, 'geometry_type', 'coordinates', 'crs'];
+      const rows = exportFeatures.map(f => [
+        ...keys.map(k => JSON.stringify(f.properties?.[k] ?? '')),
+        JSON.stringify(f.geometry?.type || ''),
+        JSON.stringify(JSON.stringify(f.geometry?.coordinates ?? null)),
+        JSON.stringify(exportCrs)
+      ].join(','));
+      content = [header.join(','), ...rows].join('\n');
+      mime = 'text/csv';
+    } else {
+      const geojson = {
+        type: 'FeatureCollection',
+        name: layerName,
+        crs: { type: 'name', properties: { name: exportCrs } },
+        features: exportFeatures
+      };
+      content = JSON.stringify(geojson, null, 2);
+      mime = 'application/geo+json';
+      filename = `${filenameBase}.${extension === 'json' ? 'json' : 'geojson'}`;
+    }
+
+    try {
+      if (window.showSaveFilePicker) {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{ description: 'GIS export', accept: { [mime]: [`.${filename.split('.').pop()}`] } }]
+        });
+        const writable = await handle.createWritable();
+        await writable.write(new Blob([content], { type: mime }));
+        await writable.close();
+      } else {
+        downloadTextFile(filename, content, mime);
+      }
+      if (extension !== 'csv') {
+        downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+      }
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        console.error(err);
+        alert('Export non riuscito. Uso download standard.');
+        downloadTextFile(filename, content, mime);
+      }
+    }
   };
 
   // ── Settings ──────────────────────────────────────────────────────────────
@@ -706,6 +794,7 @@ export default function App() {
             setGridScaleMeters={setGridScaleMeters}
             isFreehandMode={isFreehandMode && !!drawingMode}
             onAddNode={handleAddNode}
+            scaleLocked={scaleLocked}
           />
           <MapEvents onMapClick={handleMapClick} />
 
@@ -713,7 +802,7 @@ export default function App() {
             <Marker position={[gpsState.position[1], gpsState.position[0]]} icon={gpsIcon} />
           )}
           {goToMarker && (
-            <Marker position={[goToMarker[1], goToMarker[0]]} />
+            <Marker position={[goToMarker[1], goToMarker[0]]} icon={goToIcon} />
           )}
 
           {collectedPoints.map(feature => {
@@ -819,6 +908,10 @@ export default function App() {
             projectCrs={projectCrs}
             projectCrsInfo={projectCrsInfo}
             onGoToCoordinate={goToCoordinate}
+            scaleLocked={scaleLocked}
+            lockedScaleDenominator={lockedScaleDenominator}
+            toggleScaleLock={toggleScaleLock}
+            setManualScale={setManualScale}
           />
         )}
 
@@ -849,6 +942,7 @@ export default function App() {
           <DataTableView
             collectedPoints={collectedPoints} setCollectedPoints={setCollectedPoints}
             layers={layers} exportData={exportData}
+            projectCrs={projectCrs}
           />
         )}
 

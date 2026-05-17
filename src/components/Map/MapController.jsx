@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
-export default function MapController({ gpsPosition, mapRotation, setMapBearing, setGridScaleMeters, setMap, isFreehandMode, onAddNode }) {
+export default function MapController({ gpsPosition, mapRotation, setMapBearing, setGridScaleMeters, setMap, isFreehandMode, onAddNode, scaleLocked }) {
   const map = useMap();
 
   useEffect(() => {
@@ -93,6 +93,18 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       lastPoint.current = null;
     };
   }, [map, isFreehandMode, onAddNode]);
+
+
+  useEffect(() => {
+    if (!map) return;
+    const controls = [map.scrollWheelZoom, map.doubleClickZoom, map.boxZoom, map.keyboard, map.touchZoom];
+    if (scaleLocked) {
+      controls.forEach(c => c?.disable?.());
+    } else {
+      controls.forEach(c => c?.enable?.());
+    }
+    return () => controls.forEach(c => c?.enable?.());
+  }, [map, scaleLocked]);
 
   useMapEvents({
     rotate: (e) => {
