@@ -5,6 +5,7 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
   const [selectedFeatureId, setSelectedFeatureId] = useState(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportDirectoryHandle, setExportDirectoryHandle] = useState(null);
+  const [exportFileHandle, setExportFileHandle] = useState(null);
   const [exportDirectoryLabel, setExportDirectoryLabel] = useState('Download browser');
   const [exportOptions, setExportOptions] = useState({
     filename: `webgis_export_${new Date().toISOString().split('T')[0]}`,
@@ -36,19 +37,41 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
   };
 
   const chooseExportFolder = async () => {
-    if (!window.showDirectoryPicker) {
-      alert('Questo browser non permette la scelta della cartella. Verrà usato il download standard.');
-      return;
-    }
-
     try {
-      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      setExportDirectoryHandle(handle);
-      setExportDirectoryLabel(handle.name || 'Cartella selezionata');
+      if (window.showDirectoryPicker) {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        setExportDirectoryHandle(handle);
+        setExportFileHandle(null);
+        setExportDirectoryLabel(handle.name || 'Cartella selezionata');
+        return;
+      }
+
+      if (window.showSaveFilePicker) {
+        const ext = String(exportOptions.extension || 'geojson').replace(/^\./, '').toLowerCase();
+        const finalExt = ext === 'json' ? 'json' : ext === 'csv' ? 'csv' : 'geojson';
+        const mime = finalExt === 'csv' ? 'text/csv' : finalExt === 'json' ? 'application/json' : 'application/geo+json';
+        const accept = finalExt === 'csv'
+          ? { 'text/csv': ['.csv'] }
+          : finalExt === 'json'
+            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
+            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `${(exportOptions.filename || 'webgis_export').replace(/\.[^.]+$/, '')}.${finalExt}`,
+          types: [{ description: 'GIS export', accept }],
+          excludeAcceptAllOption: false,
+          startIn: 'downloads',
+        });
+        setExportFileHandle(handle);
+        setExportDirectoryHandle(null);
+        setExportDirectoryLabel(handle.name || 'File selezionato');
+        return;
+      }
+
+      alert('Questo browser non permette la scelta del percorso. Verrà usato il download standard.');
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.error(err);
-        alert('Non riesco ad accedere alla cartella selezionata.');
+        alert('Non riesco ad accedere al percorso selezionato.');
       }
     }
   };
@@ -63,6 +86,8 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
       crsMode: exportOptions.crsMode,
       crs,
       directoryHandle: exportDirectoryHandle,
+      fileHandle: exportFileHandle,
+      useSaveFilePicker: !exportDirectoryHandle && !exportFileHandle,
     });
     setShowExportDialog(false);
   };

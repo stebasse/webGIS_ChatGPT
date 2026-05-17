@@ -26,6 +26,10 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
 
   const isDragging = useRef(false);
   const lastPoint = useRef(null);
+  const activePointers = useRef(new Map());
+  const twoFingerPan = useRef(false);
+  const lastPanCenter = useRef(null);
+  const pendingTouchLatLng = useRef(null);
 
   useEffect(() => {
     if (!isFreehandMode || !onAddNode) return;
@@ -37,6 +41,25 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       return map.containerPointToLatLng(point);
     };
 
+    const pointerCenter = () => {
+      const points = [...activePointers.current.values()];
+      if (points.length < 2) return null;
+      return L.point(
+        points.reduce((sum, p) => sum + p.x, 0) / points.length,
+        points.reduce((sum, p) => sum + p.y, 0) / points.length
+      );
+    };
+
+    const startTwoFingerPan = () => {
+      twoFingerPan.current = true;
+      isDragging.current = false;
+      lastPoint.current = null;
+      pendingTouchLatLng.current = null;
+      lastPanCenter.current = pointerCenter();
+      map.dragging.disable();
+      map.doubleClickZoom.disable();
+    };
+
     const addIfFarEnough = (latlng) => {
       if (!lastPoint.current || lastPoint.current.distanceTo(latlng) >= 0.5) {
         onAddNode(latlng);
@@ -46,6 +69,15 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
 
     const handlePointerDown = (ev) => {
       if (ev.button !== undefined && ev.button !== 0) return;
+      activePointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, type: ev.pointerType });
+
+      if (ev.pointerType === 'touch' && activePointers.current.size >= 2) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        startTwoFingerPan();
+        return;
+      }
+
       ev.preventDefault();
       ev.stopPropagation();
       container.setPointerCapture?.(ev.pointerId);
@@ -53,24 +85,75 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       map.doubleClickZoom.disable();
       isDragging.current = true;
       const latlng = getLatLngFromPointer(ev);
+
+      if (ev.pointerType === 'touch') {
+        // Do not create a vertex immediately on first touch: a second finger may
+        // arrive to pan the map. The point is committed only if it remains a
+        // true one-finger draw/tap gesture.
+        pendingTouchLatLng.current = latlng;
+        lastPoint.current = null;
+        return;
+      }
+
       onAddNode(latlng);
       lastPoint.current = latlng;
     };
 
     const handlePointerMove = (ev) => {
+      if (!activePointers.current.has(ev.pointerId)) return;
+      activePointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, type: ev.pointerType });
+
+      if (twoFingerPan.current) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const center = pointerCenter();
+        if (center && lastPanCenter.current) {
+          map.panBy(lastPanCenter.current.subtract(center), { animate: false });
+        }
+        lastPanCenter.current = center;
+        return;
+      }
+
       if (!isDragging.current) return;
       ev.preventDefault();
       ev.stopPropagation();
-      addIfFarEnough(getLatLngFromPointer(ev));
+      const latlng = getLatLngFromPointer(ev);
+      if (pendingTouchLatLng.current) {
+        onAddNode(pendingTouchLatLng.current);
+        lastPoint.current = pendingTouchLatLng.current;
+        pendingTouchLatLng.current = null;
+      }
+      addIfFarEnough(latlng);
     };
 
     const handlePointerUp = (ev) => {
-      if (!isDragging.current) return;
+      const wasTracked = activePointers.current.has(ev.pointerId);
+      activePointers.current.delete(ev.pointerId);
+      container.releasePointerCapture?.(ev.pointerId);
+
+      if (twoFingerPan.current) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (activePointers.current.size < 2) {
+          twoFingerPan.current = false;
+          lastPanCenter.current = null;
+          isDragging.current = false;
+          lastPoint.current = null;
+          map.dragging.enable();
+          map.doubleClickZoom.enable();
+        }
+        return;
+      }
+
+      if (!isDragging.current && !wasTracked) return;
       ev.preventDefault();
       ev.stopPropagation();
+      if (pendingTouchLatLng.current) {
+        onAddNode(pendingTouchLatLng.current);
+        pendingTouchLatLng.current = null;
+      }
       isDragging.current = false;
       lastPoint.current = null;
-      container.releasePointerCapture?.(ev.pointerId);
       map.dragging.enable();
       map.doubleClickZoom.enable();
     };
@@ -91,6 +174,10 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       map.doubleClickZoom.enable();
       isDragging.current = false;
       lastPoint.current = null;
+      activePointers.current.clear();
+      twoFingerPan.current = false;
+      lastPanCenter.current = null;
+      pendingTouchLatLng.current = null;
     };
   }, [map, isFreehandMode, onAddNode]);
 

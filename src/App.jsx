@@ -742,19 +742,36 @@ export default function App() {
     };
 
     try {
+      const writeFileHandle = async (fileHandle, fileContent, fileMime) => {
+        const writable = await fileHandle.createWritable();
+        await writable.write(new Blob([fileContent], { type: fileMime }));
+        await writable.close();
+      };
+
       if (options.directoryHandle) {
         await writeFileToDirectory(options.directoryHandle, filename, content, mime);
         if (extension !== 'csv') {
           await writeFileToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
         }
-      } else if (window.showSaveFilePicker) {
+      } else if (options.fileHandle) {
+        await writeFileHandle(options.fileHandle, content, mime);
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
+      } else if (options.useSaveFilePicker && window.showSaveFilePicker) {
+        const fileExt = filename.split('.').pop();
+        const accept = extension === 'csv'
+          ? { 'text/csv': ['.csv'] }
+          : extension === 'json'
+            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
+            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
         const handle = await window.showSaveFilePicker({
           suggestedName: filename,
-          types: [{ description: 'GIS export', accept: { [mime]: [`.${filename.split('.').pop()}`] } }]
+          types: [{ description: 'GIS export', accept }],
+          excludeAcceptAllOption: false,
+          startIn: 'downloads',
         });
-        const writable = await handle.createWritable();
-        await writable.write(new Blob([content], { type: mime }));
-        await writable.close();
+        await writeFileHandle(handle, content, mime);
         if (extension !== 'csv') {
           downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
         }

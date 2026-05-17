@@ -230,7 +230,7 @@ export default function ExploreHUD({
       </div>
 
       {showGoTo && (
-        <div className="absolute top-[calc(7.1rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
+        <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-[9px] font-bold text-white uppercase tracking-widest">Go To Coordinates</p>
@@ -248,7 +248,7 @@ export default function ExploreHUD({
       )}
 
       {showScaleInput && !scaleLocked && (
-        <div className="absolute top-[calc(8.1rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
+        <div className="absolute top-[calc(5.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
           <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">Blocca scala</div>
           <div className="flex items-center gap-2">
             <input
