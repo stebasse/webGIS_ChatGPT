@@ -727,7 +727,18 @@ export default function App() {
     }
 
     try {
-      if (window.showSaveFilePicker) {
+      if (options.directoryHandle) {
+        const handle = await options.directoryHandle.getFileHandle(filename, { create: true });
+        const writable = await handle.createWritable();
+        await writable.write(new Blob([content], { type: mime }));
+        await writable.close();
+        if (extension !== 'csv') {
+          const prjHandle = await options.directoryHandle.getFileHandle(`${filenameBase}.prj.txt`, { create: true });
+          const prjWritable = await prjHandle.createWritable();
+          await prjWritable.write(new Blob([prjTextForCRS(exportCrs)], { type: 'text/plain' }));
+          await prjWritable.close();
+        }
+      } else if (window.showSaveFilePicker) {
         const handle = await window.showSaveFilePicker({
           suggestedName: filename,
           types: [{ description: 'GIS export', accept: { [mime]: [`.${filename.split('.').pop()}`] } }]
@@ -735,11 +746,14 @@ export default function App() {
         const writable = await handle.createWritable();
         await writable.write(new Blob([content], { type: mime }));
         await writable.close();
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
       } else {
         downloadTextFile(filename, content, mime);
-      }
-      if (extension !== 'csv') {
-        downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        if (extension !== 'csv') {
+          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+        }
       }
     } catch (err) {
       if (err?.name !== 'AbortError') {

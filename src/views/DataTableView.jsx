@@ -4,6 +4,8 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
   const [filterLayerId, setFilterLayerId] = useState('all');
   const [selectedFeatureId, setSelectedFeatureId] = useState(null);
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportDirectoryHandle, setExportDirectoryHandle] = useState(null);
+  const [exportDirectoryLabel, setExportDirectoryLabel] = useState('Download standard / browser picker');
   const [exportOptions, setExportOptions] = useState({
     filename: `webgis_export_${new Date().toISOString().split('T')[0]}`,
     extension: 'geojson',
@@ -33,6 +35,21 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
     setShowExportDialog(true);
   };
 
+
+  const chooseExportFolder = async () => {
+    if (!window.showDirectoryPicker) {
+      alert('Questo browser non supporta la scelta diretta della cartella. Verrà usato il download standard o il file picker.');
+      return;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      setExportDirectoryHandle(handle);
+      setExportDirectoryLabel(handle.name || 'Cartella selezionata');
+    } catch (err) {
+      if (err?.name !== 'AbortError') console.error(err);
+    }
+  };
+
   const runExport = async () => {
     const layerId = filterLayerId === 'all' ? null : filterLayerId;
     const crs = exportOptions.crsMode === 'custom' ? exportOptions.customCrs : undefined;
@@ -42,6 +59,7 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
       extension: exportOptions.extension,
       crsMode: exportOptions.crsMode,
       crs,
+      directoryHandle: exportDirectoryHandle,
     });
     setShowExportDialog(false);
   };
@@ -135,7 +153,16 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
             <label className="block space-y-1"><span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Estensione</span><select value={exportOptions.extension} onChange={e => setExportOptions(o => ({ ...o, extension: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary"><option value="geojson">GeoJSON</option><option value="json">JSON</option><option value="csv">CSV</option></select></label>
             <label className="block space-y-1"><span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">CRS</span><select value={exportOptions.crsMode} onChange={e => setExportOptions(o => ({ ...o, crsMode: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary"><option value="project">Project CRS ({projectCrs})</option><option value="layer">Layer CRS</option><option value="wgs84">WGS84 (EPSG:4326)</option><option value="custom">Custom EPSG</option></select></label>
             {exportOptions.crsMode === 'custom' && <input value={exportOptions.customCrs} onChange={e => setExportOptions(o => ({ ...o, customCrs: e.target.value }))} placeholder="EPSG:32632" className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary" />}
-            <p className="text-[9px] text-slate-500">Se il browser lo supporta, si aprirà il selettore percorso. Altrimenti verrà usato il download standard.</p>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Output folder</p>
+                  <p className="text-[10px] text-white/70 truncate">{exportDirectoryLabel}</p>
+                </div>
+                <button onClick={chooseExportFolder} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-primary hover:bg-primary hover:text-white transition-colors">Scegli</button>
+              </div>
+              <p className="text-[8px] text-slate-500">Se la scelta cartella non è supportata, verrà usato il file picker o il download standard.</p>
+            </div>
             <button onClick={runExport} className="w-full px-5 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20">Esporta</button>
           </div>
         </div>
