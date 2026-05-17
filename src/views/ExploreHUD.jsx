@@ -130,24 +130,34 @@ export default function ExploreHUD({
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
         {/* Scale indicator + scale lock */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <div className="flex flex-col gap-0.5 w-[128px]">
+        <div className="flex items-center gap-1.5 flex-shrink-0 rounded-2xl px-1 py-0.5">
+          <div className="flex flex-col gap-0.5 w-[118px] sm:w-[128px]">
             <div className="flex justify-between items-end w-full border-b-2 border-white/40 h-1.5">
               <div className="w-0.5 h-full bg-white/40" />
               <div className="w-0.5 h-full bg-white/40" />
             </div>
-            <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm">
-              {scaleLocked && lockedScaleDenominator ? `1:${lockedScaleDenominator}` : formatDistance(gridScaleMeters)}
+            <span className="text-[7px] sm:text-[9px] font-bold text-white tracking-widest uppercase text-center mt-0.5 shadow-sm leading-none">
+              {formatDistance(gridScaleMeters)}
             </span>
+            {scaleLocked && lockedScaleDenominator && (
+              <span className="text-[6px] sm:text-[7px] font-bold text-primary tracking-widest uppercase text-center leading-none">
+                LOCK 1:{lockedScaleDenominator}
+              </span>
+            )}
           </div>
           <button
             onClick={toggleScaleLock}
             onContextMenu={(e) => { e.preventDefault(); const v = window.prompt('Inserisci scala, es. 1:10000', lockedScaleDenominator ? `1:${lockedScaleDenominator}` : '1:10000'); if (v) setManualScale?.(v); }}
-            className={`w-8 h-8 rounded-xl border flex items-center justify-center transition-all ${scaleLocked ? 'bg-primary/25 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare.' : 'Fissa scala manuale'}
+            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 ${scaleLocked ? 'bg-primary/25 border-primary text-primary shadow-[0_0_14px_rgba(0,191,255,0.25)]' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare. Tieni premuto/click destro per impostare una nuova scala.' : 'Fissa scala manuale, es. 1:10000'}
+            aria-label={scaleLocked ? 'Sblocca scala mappa' : 'Blocca scala mappa'}
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4" />
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              {scaleLocked ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 10V7a4 4 0 00-8 0v3M6 10h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7a2 2 0 012-2zm6 4v3" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10V7a4 4 0 117.45 2.03M6 10h12a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2v-7a2 2 0 012-2zm6 4v3" />
+              )}
             </svg>
           </button>
         </div>
