@@ -15,7 +15,7 @@ const FORMATS = [
 
 const HAS_FS_API = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
 
-export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, layers, setLayers, setSelectedLayerId }) {
+export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, layers, setLayers, setSelectedLayerId, projectCrs = 'EPSG:4326' }) {
   const [fields, setFields] = useState(DEFAULT_FIELDS);
   const [format, setFormat] = useState('geojson');
   const [dirHandle, setDirHandle] = useState(null);   // FileSystemDirectoryHandle
@@ -65,6 +65,9 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       colorHex: '#10b981',
       active: true,
       fields: fields.filter(f => f.name.trim()),
+      crs: projectCrs || 'EPSG:4326',
+      sourceCrs: projectCrs || 'EPSG:4326',
+      displayCrs: projectCrs || 'EPSG:4326',
       format,
       formatExt: selectedFormat?.ext || '.geojson',
       dirHandle: null,       // cannot persist FileSystemDirectoryHandle in localStorage
