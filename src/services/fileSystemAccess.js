@@ -1,5 +1,7 @@
+const isAbortError = (error) => error?.name === 'AbortError' || error?.code === 20;
+
 export const isSecureFileSystemContext = () => (
-  typeof window !== 'undefined' && (window.isSecureContext || window.location?.protocol === 'http:' || window.location?.hostname === 'localhost')
+  typeof window !== 'undefined' && Boolean(window.isSecureContext)
 );
 
 export const canChooseDirectory = () => (
@@ -16,74 +18,105 @@ export const canChooseOutputFile = () => (
 
 export const requestReadWritePermission = async (handle) => {
   if (!handle) return false;
-  if (typeof handle.queryPermission === 'function') {
-    const current = await handle.queryPermission({ mode: 'readwrite' });
-    if (current === 'granted') return true;
+
+  try {
+    if (typeof handle.queryPermission === 'function') {
+      const current = await handle.queryPermission({ mode: 'readwrite' });
+      if (current === 'granted') return true;
+    }
+
+    if (typeof handle.requestPermission === 'function') {
+      const requested = await handle.requestPermission({ mode: 'readwrite' });
+      return requested === 'granted';
+    }
+  } catch (error) {
+    // Some WebViews expose the methods but throw when permission APIs are not fully implemented.
+    console.warn('Permesso File System Access non verificabile:', error);
+    return false;
   }
-  if (typeof handle.requestPermission === 'function') {
-    const requested = await handle.requestPermission({ mode: 'readwrite' });
-    return requested === 'granted';
-  }
+
   return true;
 };
 
 export const chooseWritableDirectory = async () => {
   if (!canChooseDirectory()) return null;
-  const handle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' });
+
+  // Keep options minimal: several Chromium WebViews throw TypeError with startIn/mode.
+  const handle = await window.showDirectoryPicker();
   const granted = await requestReadWritePermission(handle);
-  if (!granted) throw new Error('Permesso di scrittura non concesso per la cartella selezionata.');
+  if (!granted) {
+    throw new Error('Permesso di scrittura non concesso per la cartella selezionata.');
+  }
   return handle;
 };
 
-export const chooseBestWritableTarget = async ({ suggestedName, description = 'Output file', accept } = {}) => {
-  const directoryErrors = [];
-
-  if (canChooseDirectory()) {
-    try {
-      const directoryHandle = await chooseWritableDirectory();
-      if (directoryHandle) {
-        return { kind: 'directory', handle: directoryHandle, label: directoryHandle.name || 'Cartella selezionata' };
-      }
-    } catch (error) {
-      if (error?.name === 'AbortError') return null;
-      directoryErrors.push(error);
-    }
-  }
-
-  if (canChooseOutputFile()) {
-    try {
-      const fileHandle = await chooseWritableFile({ suggestedName, description, accept });
-      if (fileHandle) {
-        return { kind: 'file', handle: fileHandle, label: fileHandle.name || suggestedName || 'File selezionato' };
-      }
-    } catch (error) {
-      if (error?.name === 'AbortError') return null;
-      if (directoryErrors.length) error.directoryErrors = directoryErrors;
-      throw error;
-    }
-  }
-
-  if (directoryErrors.length) {
-    console.warn('Directory picker non disponibile o non autorizzato:', directoryErrors);
-  }
-
-  return { kind: 'download', label: 'Download browser' };
-};
-
-export const chooseWritableFile = async ({ suggestedName, description = 'Output file', accept }) => {
+export const chooseWritableFile = async ({ suggestedName, description = 'Output file', accept } = {}) => {
   if (!canChooseOutputFile()) return null;
-  const handle = await window.showSaveFilePicker({
+
+  const pickerOptions = {
     suggestedName,
-    types: [{ description, accept }],
     excludeAcceptAllOption: false,
-    startIn: 'downloads',
-  });
+  };
+
+  if (accept && Object.keys(accept).length) {
+    pickerOptions.types = [{ description, accept }];
+  }
+
+  // Do not pass startIn: it is unsupported in some WebViews and can make the button appear broken.
+  const handle = await window.showSaveFilePicker(pickerOptions);
   const granted = await requestReadWritePermission(handle);
-  if (!granted) throw new Error('Permesso di scrittura non concesso per il file selezionato.');
+  if (!granted) {
+    throw new Error('Permesso di scrittura non concesso per il file selezionato.');
+  }
   return handle;
 };
+
+export const chooseOutputDirectory = async ({ suggestedName, description = 'Output file', accept } = {}) => {
+  try {
+    const directoryHandle = await chooseWritableDirectory();
+    if (directoryHandle) {
+      return {
+        kind: 'directory',
+        handle: directoryHandle,
+        label: directoryHandle.name || 'Cartella selezionata',
+      };
+    }
+  } catch (error) {
+    if (isAbortError(error)) return null;
+    console.warn('Selezione cartella non riuscita:', error);
+  }
+
+  try {
+    const fileHandle = await chooseWritableFile({ suggestedName, description, accept });
+    if (fileHandle) {
+      return {
+        kind: 'file',
+        handle: fileHandle,
+        label: fileHandle.name || suggestedName || 'File selezionato',
+      };
+    }
+  } catch (error) {
+    if (isAbortError(error)) return null;
+    console.warn('Selezione file non riuscita:', error);
+  }
+
+  return {
+    kind: 'download',
+    handle: null,
+    label: 'Download browser',
+    unavailableReason: isSecureFileSystemContext()
+      ? 'Il browser/WebView non espone un selettore di cartelle o file scrivibile.'
+      : 'La scelta cartella richiede HTTPS oppure localhost.',
+  };
+};
+
+export const chooseBestWritableTarget = chooseOutputDirectory;
 
 export const writeTextToDirectory = async (directoryHandle, fileName, fileContent, fileMime = 'text/plain') => {
+  if (!directoryHandle) throw new Error('Cartella di output non selezionata.');
+  const granted = await requestReadWritePermission(directoryHandle);
+  if (!granted) throw new Error('Permesso di scrittura non disponibile per la cartella selezionata.');
+
   const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
   const writable = await fileHandle.createWritable();
   await writable.write(new Blob([fileContent], { type: fileMime }));
@@ -91,48 +124,14 @@ export const writeTextToDirectory = async (directoryHandle, fileName, fileConten
 };
 
 export const writeTextToFileHandle = async (fileHandle, fileContent, fileMime = 'text/plain') => {
+  if (!fileHandle) throw new Error('File di output non selezionato.');
+  const granted = await requestReadWritePermission(fileHandle);
+  if (!granted) throw new Error('Permesso di scrittura non disponibile per il file selezionato.');
+
   const writable = await fileHandle.createWritable();
   await writable.write(new Blob([fileContent], { type: fileMime }));
   await writable.close();
 };
-
-
-export const chooseDirectoryLabelFallback = async () => new Promise((resolve) => {
-  if (typeof document === 'undefined') {
-    resolve(null);
-    return;
-  }
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.multiple = true;
-  input.style.position = 'fixed';
-  input.style.left = '-9999px';
-  input.style.top = '-9999px';
-  input.setAttribute('webkitdirectory', '');
-  input.setAttribute('directory', '');
-
-  const cleanup = () => {
-    input.removeEventListener('change', onChange);
-    input.removeEventListener('cancel', onCancel);
-    if (input.parentNode) input.parentNode.removeChild(input);
-  };
-  const onCancel = () => {
-    cleanup();
-    resolve(null);
-  };
-  const onChange = () => {
-    const file = input.files?.[0];
-    const relativePath = file?.webkitRelativePath || file?.name || '';
-    const folderName = relativePath.includes('/') ? relativePath.split('/')[0] : 'Cartella selezionata';
-    cleanup();
-    resolve({ kind: 'readonly-directory', name: folderName });
-  };
-
-  input.addEventListener('change', onChange, { once: true });
-  input.addEventListener('cancel', onCancel, { once: true });
-  document.body.appendChild(input);
-  input.click();
-});
 
 export const downloadTextFileFallback = (filename, fileContent, fileMime = 'text/plain') => {
   if (typeof document === 'undefined') return;
@@ -141,10 +140,11 @@ export const downloadTextFileFallback = (filename, fileContent, fileMime = 'text
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
+  link.rel = 'noopener';
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 };
 
-export const fileSystemUnavailableMessage = 'La scelta diretta della cartella non è supportata da questo browser/WebView. Userò il file picker quando disponibile oppure il download standard del browser.';
+export const fileSystemUnavailableMessage = 'Questo browser/WebView non permette a una web app di scegliere una cartella scrivibile. Verrà usato il salvataggio file, se disponibile, oppure il download standard.';
