@@ -13,12 +13,14 @@ const FORMATS = [
   { id: 'shp', label: 'Shapefile', ext: '.shp', supported: false },
 ];
 
-const HAS_FS_API = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+const canChooseDirectory = () => typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function';
+const canChooseOutputFile = () => typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function';
 
 export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, layers, setLayers, setSelectedLayerId, projectCrs = 'EPSG:4326' }) {
   const [fields, setFields] = useState(DEFAULT_FIELDS);
   const [format, setFormat] = useState('geojson');
   const [dirHandle, setDirHandle] = useState(null);   // FileSystemDirectoryHandle
+  const [fileHandle, setFileHandle] = useState(null); // FileSystemFileHandle fallback
   const [dirLabel, setDirLabel] = useState('');
   const [errors, setErrors] = useState({});
 
@@ -32,13 +34,47 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     setFields(prev => prev.map((f, i) => i === idx ? { ...f, [key]: value } : f));
 
   const chooseFolder = async () => {
-    if (!HAS_FS_API) return;
     try {
-      const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      setDirHandle(handle);
-      setDirLabel(handle.name);
+      if (canChooseDirectory()) {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        if (handle?.requestPermission) {
+          const permission = await handle.requestPermission({ mode: 'readwrite' });
+          if (permission !== 'granted') {
+            alert('Permesso di scrittura non concesso per la cartella selezionata.');
+            return;
+          }
+        }
+        setDirHandle(handle);
+        setFileHandle(null);
+        setDirLabel(handle.name || 'Cartella selezionata');
+        return;
+      }
+
+      if (canChooseOutputFile()) {
+        const selectedFormat = FORMATS.find(f => f.id === format);
+        const ext = selectedFormat?.ext || '.geojson';
+        const baseName = (newLayer.name?.trim() || 'new_layer').replace(/[^a-z0-9_-]+/gi, '_');
+        const mime = format === 'csv' ? 'text/csv' : format === 'kml' ? 'application/vnd.google-earth.kml+xml' : 'application/geo+json';
+        const accept = format === 'csv'
+          ? { 'text/csv': ['.csv'] }
+          : format === 'kml'
+            ? { 'application/vnd.google-earth.kml+xml': ['.kml'], 'text/xml': ['.kml'] }
+            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'] };
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `${baseName}${ext}`,
+          types: [{ description: 'Layer file', accept }],
+          excludeAcceptAllOption: false,
+          startIn: 'downloads',
+        });
+        setFileHandle(handle);
+        setDirHandle(null);
+        setDirLabel(handle.name || 'File selezionato');
+        return;
+      }
+
+      alert('Questo browser non permette la scelta della cartella. Il layer potrà comunque essere creato nel progetto.');
     } catch (e) {
-      if (e.name !== 'AbortError') alert('Impossibile selezionare la cartella: ' + e.message);
+      if (e?.name !== 'AbortError') alert('Impossibile selezionare la cartella: ' + (e?.message || e));
     }
   };
 
@@ -70,7 +106,8 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       displayCrs: projectCrs || 'EPSG:4326',
       format,
       formatExt: selectedFormat?.ext || '.geojson',
-      dirHandle: null,       // cannot persist FileSystemDirectoryHandle in localStorage
+      dirHandle: dirHandle || null,
+      fileHandle: fileHandle || null,
       dirLabel: dirLabel || null,
       symbology: { mode: 'single', attribute: null, rules: [] }
     };
@@ -80,6 +117,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     setFields(DEFAULT_FIELDS);
     setFormat('geojson');
     setDirHandle(null);
+    setFileHandle(null);
     setDirLabel('');
     setErrors({});
     setActiveTab('layers');
@@ -169,19 +207,14 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             <div className="space-y-2">
               <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">Output Folder</label>
               <div className="flex items-center gap-3">
-                {HAS_FS_API ? (
-                  <button
-                    onClick={chooseFolder}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-slate-400 hover:border-primary hover:text-white transition-all"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                    Choose Folder
-                  </button>
-                ) : (
-                  <div className="px-4 py-2.5 bg-amber-400/10 border border-amber-400/20 rounded-xl text-[10px] text-amber-400">
-                    File System Access API non supportata. Il file verrà scaricato tramite browser al momento dell'esportazione.
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={chooseFolder}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-slate-400 hover:border-primary hover:text-white transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                  Choose Folder
+                </button>
                 {dirLabel && (
                   <span className="text-xs text-emerald-400 font-mono truncate max-w-[200px]">📁 {dirLabel}</span>
                 )}
