@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BASEMAPS } from '../config/constants';
 import { FALLBACK_CRS } from '../services/crsService';
+import { t as translate } from '../i18n';
 
 export default function ExploreHUD({
+  language = 'it',
   showGrid, setShowGrid, activeBasemap, setActiveBasemap,
   gpsState, locateMe,
   drawingMode, finishDrawing,
@@ -33,6 +35,7 @@ export default function ExploreHUD({
   toggleScaleLock,
   setManualScale
 }) {
+  const tt = (key) => translate(language, key);
   const [gridPosition, setGridPosition] = useState('center');
   const [showGoTo, setShowGoTo] = useState(false);
   const [goToValues, setGoToValues] = useState({ x: '', y: '', crs: projectCrs || 'EPSG:4326' });
@@ -63,7 +66,7 @@ export default function ExploreHUD({
   const hasSelectableLayers = Array.isArray(layers) && layers.length > 0;
   const crsOptions = FALLBACK_CRS.some(crs => crs.code === projectCrs)
     ? FALLBACK_CRS
-    : [{ code: projectCrs || 'EPSG:4326', name: 'CRS selezionato' }, ...FALLBACK_CRS];
+    : [{ code: projectCrs || 'EPSG:4326', name: tt('selectedCrs') }, ...FALLBACK_CRS];
   const basemapIsDark = activeBasemap === 'carto_dark' || activeBasemap === 'satellite';
   const activeLayerIsPoint = !!activeLayer?.type?.includes('Point');
 
@@ -101,20 +104,20 @@ export default function ExploreHUD({
               setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer');
             }}
             className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
-            title={!hasSelectableLayers ? 'Aggiungi layer' : statusMenusLocked ? 'Menu bloccati' : 'Cambia layer attivo'}
+            title={!hasSelectableLayers ? tt('addLayer') : statusMenusLocked ? tt('lockedMenus') : tt('activeLayer')}
           >
             {activeLayer ? (
               <>
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeLayer.colorHex || '#0ea5e9' }} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Layer attivo</div>
+                  <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">{tt('activeLayer')}</div>
                   <div className="text-[9px] font-bold text-white uppercase tracking-widest truncate">{activeLayer.name}</div>
                 </div>
               </>
             ) : (
               <>
                 <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={hasSelectableLayers ? "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 4v16m8-8H4"} /></svg>
-                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">{hasSelectableLayers ? 'Nessun layer' : 'Aggiungi layer'}</span>
+                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">{hasSelectableLayers ? tt('noLayer') : tt('addLayer')}</span>
               </>
             )}
             <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -139,7 +142,7 @@ export default function ExploreHUD({
                     className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left text-white hover:bg-white/10 transition-colors"
                   >
                     <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">Nuovo layer</span>
+                    <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{tt('createNewLayer')}</span>
                   </button>
                   <button
                     type="button"
@@ -147,7 +150,7 @@ export default function ExploreHUD({
                     className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left text-white hover:bg-white/10 transition-colors"
                   >
                     <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
-                    <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">Carica layer</span>
+                    <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{tt('uploadExistingLayer')}</span>
                   </button>
                 </>
               )}
@@ -165,7 +168,7 @@ export default function ExploreHUD({
               });
             }}
             className={`glass bg-slate-950/85 backdrop-blur-xl w-9 h-9 rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
-            title={statusMenusLocked ? 'Sblocca menu CRS e layer' : 'Blocca menu CRS e layer'}
+            title={statusMenusLocked ? (language === 'en' ? 'Unlock CRS and layer menus' : 'Sblocca menu CRS e layer') : (language === 'en' ? 'Lock CRS and layer menus' : 'Blocca menu CRS e layer')}
             aria-pressed={statusMenusLocked}
           >
             {statusMenusLocked ? (
@@ -180,11 +183,11 @@ export default function ExploreHUD({
             type="button"
             onClick={() => { if (statusMenusLocked) return; setOpenStatusMenu(openStatusMenu === 'crs' ? null : 'crs'); }}
             className={`w-full glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
-            title={statusMenusLocked ? 'Menu bloccati' : 'Cambia CRS progetto'}
+            title={statusMenusLocked ? tt('lockedMenus') : tt('changeCrs')}
           >
             <div className="flex items-center justify-end gap-2">
               <div className="min-w-0">
-                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">CRS progetto</div>
+                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">{tt('crsProject')}</div>
                 <div className="text-[9px] font-mono font-bold text-primary truncate">{projectCrs || 'EPSG:4326'}</div>
               </div>
               <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -355,7 +358,7 @@ export default function ExploreHUD({
             <input value={goToValues.y} onChange={e => setGoToValues(v => ({ ...v, y: e.target.value }))} placeholder="N / Lat" className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
           </div>
           <input value={goToValues.crs} onChange={e => setGoToValues(v => ({ ...v, crs: e.target.value }))} placeholder="EPSG:32632" className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
-          <button onClick={() => onGoToCoordinate?.({ x: goToValues.x, y: goToValues.y, crs: goToValues.crs })} className="w-full px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Center Map</button>
+          <button onClick={() => onGoToCoordinate?.({ x: goToValues.x, y: goToValues.y, crs: goToValues.crs })} className="w-full px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">{language === 'en' ? 'Center map' : 'Centra mappa'}</button>
         </div>
       )}
 
@@ -430,7 +433,7 @@ export default function ExploreHUD({
             aria-pressed={pointTapMode}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
-            {pointTapMode ? 'Tap point attivo' : 'Tap point'}
+            {pointTapMode ? `${language === 'en' ? 'Tap point' : 'Punto da tap'} ${language === 'en' ? 'active' : 'attivo'}` : (language === 'en' ? 'Tap point' : 'Punto da tap')}
           </button>
         </div>
       )}
@@ -440,7 +443,7 @@ export default function ExploreHUD({
         <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-auto">
           <div className="glass px-4 py-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-xl flex items-center gap-3">
             <div>
-              <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">Tap point</div>
+              <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">{language === 'en' ? 'Tap point' : 'Punto da tap'}</div>
               <div className="text-xs font-mono text-white">seleziona un layer puntuale</div>
             </div>
             <button onClick={() => setPointTapMode?.(false)} className="w-7 h-7 rounded-full bg-white/5 hover:bg-red-400/20 text-white/50 hover:text-red-300 transition-all" title="Disattiva aggiunta punti">

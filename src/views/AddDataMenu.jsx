@@ -1,7 +1,9 @@
-export default function AddDataMenu({ setActiveTab }) {
+import { t } from '../i18n';
+
+export default function AddDataMenu({ setActiveTab, language = 'it' }) {
   return (
     <div className="w-full max-w-4xl h-full flex flex-col items-center justify-center animate-in fade-in duration-500 pointer-events-auto pb-20">
-      <h2 className="text-3xl font-bold text-white uppercase tracking-[0.3em] mb-16">Aggiungi dati al progetto</h2>
+      <h2 className="text-3xl font-bold text-white uppercase tracking-[0.3em] mb-16">{language === 'en' ? 'Add data to project' : 'Aggiungi dati al progetto'}</h2>
       <div className="flex gap-10">
          <button 
            onClick={() => setActiveTab('new-layer')}
@@ -11,8 +13,8 @@ export default function AddDataMenu({ setActiveTab }) {
                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
             </div>
             <div className="text-center">
-               <h3 className="text-xl font-bold text-white uppercase tracking-widest">Crea layer</h3>
-               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">Definisci un nuovo schema vettoriale</p>
+               <h3 className="text-xl font-bold text-white uppercase tracking-widest">{t(language, 'createLayer')}</h3>
+               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{language === 'en' ? 'Define a new vector schema' : 'Definisci un nuovo schema vettoriale'}</p>
             </div>
          </button>
 
@@ -24,12 +26,12 @@ export default function AddDataMenu({ setActiveTab }) {
                <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             </div>
             <div className="text-center">
-               <h3 className="text-xl font-bold text-white uppercase tracking-widest">Carica file</h3>
-               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">Importa SHP, KML, GeoJSON</p>
+               <h3 className="text-xl font-bold text-white uppercase tracking-widest">{t(language, 'uploadLayer')}</h3>
+               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{language === 'en' ? 'Import SHP, KML, GeoJSON' : 'Importa SHP, KML, GeoJSON'}</p>
             </div>
          </button>
       </div>
-      <button onClick={() => setActiveTab('layers')} className="mt-12 text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] hover:text-white transition-colors">← Torna alla lista layer</button>
+      <button onClick={() => setActiveTab('layers')} className="mt-12 text-[10px] font-bold text-slate-500 uppercase tracking-[0.3em] hover:text-white transition-colors">{t(language, 'backToLayers')}</button>
     </div>
   );
 }

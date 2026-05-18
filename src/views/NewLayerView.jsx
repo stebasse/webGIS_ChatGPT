@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t as translate, fieldTypeLabel } from '../i18n';
 import { canChooseDirectory, canChooseOutputFile, chooseWritableDirectory, chooseWritableFile, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle, downloadTextFileFallback } from '../services/fileSystemAccess';
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
@@ -15,7 +16,8 @@ const FORMATS = [
 ];
 
 
-export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, layers, setLayers, setSelectedLayerId, projectCrs = 'EPSG:4326' }) {
+export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, layers, setLayers, setSelectedLayerId, projectCrs = 'EPSG:4326', language = 'it' }) {
+  const tt = (key) => translate(language, key);
   const [fields, setFields] = useState(DEFAULT_FIELDS);
   const [format, setFormat] = useState('geojson');
   const [dirHandle, setDirHandle] = useState(null);   // FileSystemDirectoryHandle
@@ -56,7 +58,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       if (!handle) return;
       setDirHandle(handle);
       setFileHandle(null);
-      setDirLabel(handle.name || 'Cartella selezionata');
+      setDirLabel(handle.name || tt('selectedFolder'));
       setShowOutputTargetDialog(false);
     } catch (e) {
       if (e?.name !== 'AbortError') alert('Impossibile selezionare la cartella: ' + (e?.message || e));
@@ -84,22 +86,22 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   const useDownloadTarget = () => {
     setDirHandle(null);
     setFileHandle(null);
-    setDirLabel('Download browser');
+    setDirLabel(tt('browserDownload'));
     setShowOutputTargetDialog(false);
   };
 
   const getVisibleOutputPath = () => {
     const target = getOutputTargetInfo();
     if (dirHandle) {
-      return `${dirLabel || dirHandle.name || 'Cartella selezionata'}/${target.filename}`;
+      return `${dirLabel || dirHandle.name || tt('selectedFolder')}/${target.filename}`;
     }
     if (fileHandle) {
       return fileHandle.name || target.filename;
     }
-    if (dirLabel === 'Download browser') {
-      return `Download browser/${target.filename}`;
+    if (dirLabel === tt('browserDownload')) {
+      return `${tt('browserDownload')}/${target.filename}`;
     }
-    return `Non selezionato (default: Download browser/${target.filename})`;
+    return `${tt('notSelected')} (${tt('defaultLabel')}: ${tt('browserDownload')}/${target.filename})`;
   };
 
   const validate = () => {
@@ -177,7 +179,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   return (
     <div className="w-full max-w-4xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 sm:mb-6 mt-2 sm:mt-4 w-full text-center">
-        <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Crea nuovo layer</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('createNewLayer')}</h2>
       </div>
 
       <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
@@ -185,7 +187,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
           {/* Tipo geometria */}
           <section>
-            <p className="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest">Tipo geometria</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest">{language === 'en' ? 'Geometry type' : 'Tipo geometria'}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {geomTipos.map(type => (
                 <button
@@ -200,7 +202,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                         : <path d={type.icon} />}
                     </svg>
                   </div>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest text-center leading-tight ${newLayer.type === type.id ? 'text-white' : 'text-slate-500'}`}>{type.name}</span>
+                  <span className={`text-[9px] font-bold uppercase tracking-widest text-center leading-tight ${newLayer.type === type.id ? 'text-white' : 'text-slate-500'}`}>{type.id === 'Punto' ? tt('point') : type.id === 'Linea' ? tt('line') : type.id === 'Poligono' ? tt('polygon') : tt('table')}</span>
                 </button>
               ))}
             </div>
@@ -208,7 +210,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
           {/* Nome layer */}
           <section className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome layer</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{language === 'en' ? 'Layer name' : 'Nome layer'}</label>
             <input
               type="text"
               placeholder="es. Rilievo_Vegetazione_2024"
@@ -221,11 +223,11 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
           {/* File di output */}
           <section className="space-y-4">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">File di output</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('outputFile')}</p>
 
             {/* Format selection */}
             <div className="space-y-2">
-              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">Format</label>
+              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">{language === 'en' ? 'Format' : 'Formato'}</label>
               <div className="flex flex-wrap gap-2">
                 {FORMATS.map(f => (
                   <button
@@ -249,7 +251,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
             {/* Save folder */}
             <div className="space-y-2">
-              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">Cartella di output</label>
+              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">{tt('outputFolder')}</label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -257,7 +259,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                   className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-slate-400 hover:border-primary hover:text-white transition-all"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                  Scegli output
+                  {tt('choose')} {tt('output')}
                 </button>
                 <span className="text-xs text-emerald-400 font-mono break-all flex-1 min-w-0">📁 {getVisibleOutputPath()}</span>
               </div>
@@ -267,21 +269,21 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
           {/* Schema attributi */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Schema attributi</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{language === 'en' ? 'Attribute schema' : 'Schema attributi'}</label>
               <button
                 onClick={addField}
                 className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold text-primary border border-primary/30 rounded-xl hover:bg-primary/10 transition-all uppercase tracking-widest"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                Aggiungi campo
+                {language === 'en' ? 'Add field' : 'Aggiungi campo'}
               </button>
             </div>
             {errors.fields && <p className="text-[10px] text-red-400">{errors.fields}</p>}
 
             <div className="hidden sm:grid grid-cols-[1fr_120px_120px_36px] gap-2 px-3">
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Nome campo</span>
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Tipo</span>
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Default</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">{tt('fieldName')}</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">{tt('type')}</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">{tt('defaultValue')}</span>
               <span />
             </div>
 
@@ -299,13 +301,13 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                     onChange={(e) => updateField(idx, 'type', e.target.value)}
                     className="hidden sm:block bg-slate-900 text-[10px] text-slate-400 border border-white/10 rounded-lg px-2 py-1 outline-none"
                   >
-                    {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    {FIELD_TYPES.map(type => <option key={type} value={type}>{fieldTypeLabel(language, type)}</option>)}
                   </select>
                   <input
                     type="text"
                     value={field.defaultVal}
                     onChange={(e) => updateField(idx, 'defaultVal', e.target.value)}
-                    placeholder="default..."
+                    placeholder={tt('defaultValue')}
                     className="hidden sm:block bg-transparent text-[10px] text-slate-500 outline-none px-2 border-b border-white/10 focus:border-primary/50 py-1"
                   />
                   <button
@@ -322,13 +324,13 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                       onChange={(e) => updateField(idx, 'type', e.target.value)}
                       className="flex-1 bg-slate-900 text-[10px] text-slate-400 border border-white/10 rounded-lg px-2 py-1 outline-none"
                     >
-                      {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                      {FIELD_TYPES.map(type => <option key={type} value={type}>{fieldTypeLabel(language, type)}</option>)}
                     </select>
                     <input
                       type="text"
                       value={field.defaultVal}
                       onChange={(e) => updateField(idx, 'defaultVal', e.target.value)}
-                      placeholder="default..."
+                      placeholder={tt('defaultValue')}
                       className="flex-1 bg-transparent text-[10px] text-slate-500 outline-none px-2 border-b border-white/10 py-1"
                     />
                   </div>
@@ -351,12 +353,12 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
               setActiveTab('explore');
             }}
             className="px-4 sm:px-8 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
-          >Annulla</button>
+          >{tt('cancel')}</button>
           <button
             onClick={createLayer}
             className="flex-1 sm:flex-none px-8 sm:px-12 py-3 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20"
           >
-            Crea layer
+            {tt('createLayer')}
           </button>
         </div>
       </div>
@@ -366,30 +368,30 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
           <div className="glass w-full max-w-xs rounded-[2rem] border border-white/15 shadow-2xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">Cartella di output</h3>
-                <p className="text-[9px] text-slate-500 mt-1 leading-snug">Scegli dove salvare il nuovo layer.</p>
+                <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">{tt('outputFolder')}</h3>
+                <p className="text-[9px] text-slate-500 mt-1 leading-snug">{language === 'en' ? 'Choose where to save the new layer.' : 'Scegli dove salvare il nuovo layer.'}</p>
               </div>
               <button type="button" onClick={() => setShowOutputTargetDialog(false)} className="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400">×</button>
             </div>
 
             {canChooseDirectory() && (
               <button type="button" onClick={chooseDirectoryTarget} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-left text-[10px] font-bold uppercase tracking-widest text-white hover:border-primary">
-                Scegli cartella
+                {tt('chooseFolder')}
               </button>
             )}
 
             {canChooseOutputFile() && (
               <button type="button" onClick={chooseFileTarget} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-left text-[10px] font-bold uppercase tracking-widest text-white hover:border-primary">
-                Scegli file di output
+                {tt('chooseOutputFile')}
               </button>
             )}
 
             <button type="button" onClick={useDownloadTarget} className="w-full px-4 py-3 rounded-xl bg-primary text-white text-left text-[10px] font-bold uppercase tracking-widest">
-              Usa download browser
+              {tt('useBrowserDownload')}
             </button>
 
             <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Percorso completo file</div>
+              <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500">{tt('fullFilePath')}</div>
               <div className="text-[10px] text-emerald-300 font-mono break-all mt-1">{getVisibleOutputPath()}</div>
             </div>
 

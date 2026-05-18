@@ -20,6 +20,7 @@ import NewLayerView from './views/NewLayerView';
 import UploadView from './views/UploadView';
 import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
+import { t } from './i18n';
 import OnboardingGuide from './components/OnboardingGuide';
 import { transformCoord, transformFeature, transformGeometry, formatCoordinate, distanceInCrs, areaInCrs, getCrsInfo, getCrsCode, downloadTextFile, prjTextForCRS } from './services/crsService';
 import { writeTextToDirectory, writeTextToFileHandle, chooseWritableFile, canChooseOutputFile } from './services/fileSystemAccess';
@@ -37,7 +38,7 @@ function resolveFeatureColor(feature, layer) {
 
 const DEFAULT_SETTINGS = {
   theme: 'dark', units: 'metric', crsOverride: false, projectCrs: 'EPSG:4326',
-  gpu: true, logLevel: 'low', compassMode: false
+  gpu: true, logLevel: 'low', compassMode: false, language: 'it'
 };
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
@@ -82,6 +83,7 @@ export default function App() {
   const [draftCoordinates, setDraftCoordinates] = useState([]);
   const [layerFilter, setLayerFilter] = useState('');
   const [newLayer, setNewLayer] = useState({ name: '', type: 'Point' });
+  const language = settings.language || 'it';
   const [uploadSearch, setUploadSearch] = useState('');
   const [selectedUpload, setSelectedUpload] = useState(null);
   const [popupFeature, setPopupFeature] = useState(null);
@@ -957,6 +959,7 @@ export default function App() {
 
         {activeTab === 'explore' && (
           <ExploreHUD
+            language={language}
             showGrid={showGrid} setShowGrid={setShowGrid}
             activeBasemap={activeBasemap} setActiveBasemap={setActiveBasemap}
             gpsState={gpsState} locateMe={locateMe}
@@ -996,10 +999,11 @@ export default function App() {
 
 
 
-        {activeTab === 'add-feature' && <AddDataMenu setActiveTab={setActiveTab} />}
+        {activeTab === 'add-feature' && <AddDataMenu setActiveTab={setActiveTab} language={language} />}
 
         {activeTab === 'new-layer' && (
           <NewLayerView
+            language={language}
             newLayer={newLayer} setNewLayer={setNewLayer}
             setActiveTab={setActiveTab} layers={layers} setLayers={setLayers}
             setSelectedLayerId={setSelectedLayerId}
@@ -1019,6 +1023,7 @@ export default function App() {
 
         {activeTab === 'data-table' && (
           <DataTableView
+            language={language}
             collectedPoints={collectedPoints} setCollectedPoints={setCollectedPoints}
             layers={layers} exportData={exportData}
             projectCrs={projectCrs}
@@ -1027,6 +1032,7 @@ export default function App() {
 
         {activeTab === 'settings' && (
           <SettingsView
+            language={language}
             draftSettings={draftSettings} setDraftSettings={setDraftSettings}
             saveSettings={saveSettings}
             showTutorialAgain={showTutorialAgain}
@@ -1039,7 +1045,7 @@ export default function App() {
             <div className="glass w-full max-w-sm rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
               <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
                 <div>
-                  <h3 className="text-xs font-bold text-white uppercase tracking-widest">Dettagli Feature</h3>
+                  <h3 className="text-xs font-bold text-white uppercase tracking-widest">{t(language, 'featureProperties')}</h3>
                   <p className="text-[10px] text-primary font-bold mt-0.5 uppercase">{popupFeature.layer.name}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1076,12 +1082,12 @@ export default function App() {
               <div className="p-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
                 {showAddFieldForm && (
                   <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
-                    <div className="text-[9px] font-bold text-white/50 uppercase tracking-widest">Nuovo campo</div>
+                    <div className="text-[9px] font-bold text-white/50 uppercase tracking-widest">{t(language, 'fieldName')}</div>
                     <input
                       type="text"
                       value={newPopupField.name}
                       onChange={(e) => setNewPopupField(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nome campo"
+                      placeholder={t(language, 'fieldName')}
                       className="w-full bg-black/20 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary"
                     />
                     <select
@@ -1092,8 +1098,8 @@ export default function App() {
                       {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => { setShowAddFieldForm(false); setNewPopupField({ name: '', type: 'String' }); }} className="px-3 py-2 rounded-lg bg-white/5 text-[9px] font-bold uppercase tracking-widest text-white/50">Annulla</button>
-                      <button onClick={() => addFieldToFeature(popupFeature.feature.properties.id)} className="px-3 py-2 rounded-lg bg-primary/20 text-[9px] font-bold uppercase tracking-widest text-primary">Aggiungi</button>
+                      <button onClick={() => { setShowAddFieldForm(false); setNewPopupField({ name: '', type: 'String' }); }} className="px-3 py-2 rounded-lg bg-white/5 text-[9px] font-bold uppercase tracking-widest text-white/50">{t(language, 'cancel')}</button>
+                      <button onClick={() => addFieldToFeature(popupFeature.feature.properties.id)} className="px-3 py-2 rounded-lg bg-primary/20 text-[9px] font-bold uppercase tracking-widest text-primary">{t(language, 'add')}</button>
                     </div>
                   </div>
                 )}
@@ -1177,6 +1183,7 @@ export default function App() {
         <div className="fixed left-0 top-0 bottom-0 z-[990] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 pr-2 animate-in slide-in-from-left-4 fade-in duration-300">
           <div className="relative h-full w-full">
             <LayersView
+              language={language}
               layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
               selectedLayerId={selectedLayerId} setSelectedLayerId={setSelectedLayerId}
               toggleLayer={toggleLayer} deleteLayer={deleteLayer} setActiveTab={setActiveTab} setLayers={setLayers}
@@ -1188,7 +1195,7 @@ export default function App() {
       {showOnboarding && <OnboardingGuide onFinish={finishOnboarding} />}
 
       {/* BOTTOM NAVIGATION */}
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onAddFeature={collectPoint} />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onAddFeature={collectPoint} language={language} />
     </div>
   );
 }

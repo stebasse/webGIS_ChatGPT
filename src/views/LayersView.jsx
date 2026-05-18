@@ -197,7 +197,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
         <div className="px-6 py-4 border-t border-white/10 bg-black/20 flex justify-end gap-3">
           <button onClick={onClose} className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Annulla</button>
           <button onClick={save} className="px-8 py-3 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20 text-xs">
-            Apply
+            Applica
           </button>
         </div>
       </div>
