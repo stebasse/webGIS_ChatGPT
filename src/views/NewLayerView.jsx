@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { chooseBestWritableTarget, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle, downloadTextFileFallback } from '../services/fileSystemAccess';
+import { canChooseDirectory, canChooseOutputFile, chooseWritableDirectory, chooseWritableFile, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle, downloadTextFileFallback } from '../services/fileSystemAccess';
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 const DEFAULT_FIELDS = [
@@ -21,6 +21,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   const [dirHandle, setDirHandle] = useState(null);   // FileSystemDirectoryHandle
   const [fileHandle, setFileHandle] = useState(null); // FileSystemFileHandle fallback
   const [dirLabel, setDirLabel] = useState('');
+  const [showOutputTargetDialog, setShowOutputTargetDialog] = useState(false);
   const [errors, setErrors] = useState({});
 
   const addField = () =>
@@ -45,38 +46,46 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     return { ext, baseName, mime, accept, filename: `${baseName}${ext}` };
   };
 
-  const chooseFolder = async () => {
+  const chooseFolder = () => {
+    setShowOutputTargetDialog(true);
+  };
+
+  const chooseDirectoryTarget = async () => {
+    try {
+      const handle = await chooseWritableDirectory();
+      if (!handle) return;
+      setDirHandle(handle);
+      setFileHandle(null);
+      setDirLabel(handle.name || 'Cartella selezionata');
+      setShowOutputTargetDialog(false);
+    } catch (e) {
+      if (e?.name !== 'AbortError') alert('Impossibile selezionare la cartella: ' + (e?.message || e));
+    }
+  };
+
+  const chooseFileTarget = async () => {
     try {
       const target = getOutputTargetInfo();
-      const outputTarget = await chooseBestWritableTarget({
+      const handle = await chooseWritableFile({
         suggestedName: target.filename,
         description: 'Layer file',
         accept: target.accept,
       });
-
-      if (!outputTarget) return;
-
-      if (outputTarget.kind === 'directory') {
-        setDirHandle(outputTarget.handle);
-        setFileHandle(null);
-        setDirLabel(outputTarget.label);
-        return;
-      }
-
-      if (outputTarget.kind === 'file') {
-        setFileHandle(outputTarget.handle);
-        setDirHandle(null);
-        setDirLabel(outputTarget.label);
-        return;
-      }
-
+      if (!handle) return;
+      setFileHandle(handle);
       setDirHandle(null);
-      setFileHandle(null);
-      setDirLabel(outputTarget.label || 'Download browser');
-      alert(fileSystemUnavailableMessage);
+      setDirLabel(handle.name || target.filename);
+      setShowOutputTargetDialog(false);
     } catch (e) {
-      if (e?.name !== 'AbortError') alert('Impossibile selezionare il percorso: ' + (e?.message || e));
+      if (e?.name !== 'AbortError') alert('Impossibile selezionare il file: ' + (e?.message || e));
     }
+  };
+
+  const useDownloadTarget = () => {
+    setDirHandle(null);
+    setFileHandle(null);
+    setDirLabel('Download browser');
+    setShowOutputTargetDialog(false);
   };
 
   const validate = () => {
@@ -323,6 +332,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
               setFields(DEFAULT_FIELDS);
               setFormat('geojson');
               setDirHandle(null);
+              setFileHandle(null);
               setDirLabel('');
               setErrors({});
               setActiveTab('explore');
@@ -337,6 +347,38 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
           </button>
         </div>
       </div>
+
+      {showOutputTargetDialog && (
+        <div className="fixed inset-0 z-[140] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass w-full max-w-xs rounded-[2rem] border border-white/15 shadow-2xl p-4 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">Output Folder</h3>
+                <p className="text-[9px] text-slate-500 mt-1 leading-snug">Scegli dove salvare il nuovo layer.</p>
+              </div>
+              <button type="button" onClick={() => setShowOutputTargetDialog(false)} className="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400">×</button>
+            </div>
+
+            {canChooseDirectory() && (
+              <button type="button" onClick={chooseDirectoryTarget} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-left text-[10px] font-bold uppercase tracking-widest text-white hover:border-primary">
+                Scegli cartella
+              </button>
+            )}
+
+            {canChooseOutputFile() && (
+              <button type="button" onClick={chooseFileTarget} className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-left text-[10px] font-bold uppercase tracking-widest text-white hover:border-primary">
+                Scegli file di output
+              </button>
+            )}
+
+            <button type="button" onClick={useDownloadTarget} className="w-full px-4 py-3 rounded-xl bg-primary text-white text-left text-[10px] font-bold uppercase tracking-widest">
+              Usa download browser
+            </button>
+
+            <p className="text-[8px] text-slate-500 leading-snug">{fileSystemUnavailableMessage}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

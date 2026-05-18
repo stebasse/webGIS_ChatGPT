@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { chooseBestWritableTarget, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
+import { canChooseDirectory, canChooseOutputFile, chooseWritableDirectory, chooseWritableFile, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
 
 export default function DataTableView({ collectedPoints, setCollectedPoints, layers, exportData, projectCrs = 'EPSG:4326' }) {
   const [filterLayerId, setFilterLayerId] = useState('all');
@@ -8,6 +8,7 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
   const [exportDirectoryHandle, setExportDirectoryHandle] = useState(null);
   const [exportFileHandle, setExportFileHandle] = useState(null);
   const [exportDirectoryLabel, setExportDirectoryLabel] = useState('Download browser');
+  const [showExportTargetDialog, setShowExportTargetDialog] = useState(false);
   const [exportOptions, setExportOptions] = useState({
     filename: `webgis_export_${new Date().toISOString().split('T')[0]}`,
     extension: 'geojson',
@@ -52,41 +53,52 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
     };
   };
 
-  const chooseExportFolder = async () => {
+  const chooseExportFolder = () => {
+    setShowExportTargetDialog(true);
+  };
+
+  const chooseExportDirectoryTarget = async () => {
+    try {
+      const handle = await chooseWritableDirectory();
+      if (!handle) return;
+      setExportDirectoryHandle(handle);
+      setExportFileHandle(null);
+      setExportDirectoryLabel(handle.name || 'Cartella selezionata');
+      setShowExportTargetDialog(false);
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        console.error(err);
+        alert('Non riesco ad accedere alla cartella selezionata: ' + (err?.message || err));
+      }
+    }
+  };
+
+  const chooseExportFileTarget = async () => {
     try {
       const target = getExportTargetInfo();
-      const outputTarget = await chooseBestWritableTarget({
+      const handle = await chooseWritableFile({
         suggestedName: target.suggestedName,
         description: 'GIS export',
         accept: target.accept,
       });
-
-      if (!outputTarget) return;
-
-      if (outputTarget.kind === 'directory') {
-        setExportDirectoryHandle(outputTarget.handle);
-        setExportFileHandle(null);
-        setExportDirectoryLabel(outputTarget.label);
-        return;
-      }
-
-      if (outputTarget.kind === 'file') {
-        setExportFileHandle(outputTarget.handle);
-        setExportDirectoryHandle(null);
-        setExportDirectoryLabel(outputTarget.label);
-        return;
-      }
-
+      if (!handle) return;
+      setExportFileHandle(handle);
       setExportDirectoryHandle(null);
-      setExportFileHandle(null);
-      setExportDirectoryLabel(outputTarget.label || 'Download browser');
-      alert(fileSystemUnavailableMessage + ' Verrà usato il download standard quando premi Esporta.');
+      setExportDirectoryLabel(handle.name || target.suggestedName);
+      setShowExportTargetDialog(false);
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.error(err);
-        alert('Non riesco ad accedere al percorso selezionato: ' + (err?.message || err));
+        alert('Non riesco ad accedere al file selezionato: ' + (err?.message || err));
       }
     }
+  };
+
+  const useExportDownloadTarget = () => {
+    setExportDirectoryHandle(null);
+    setExportFileHandle(null);
+    setExportDirectoryLabel('Download browser');
+    setShowExportTargetDialog(false);
   };
 
   const runExport = async () => {
@@ -203,6 +215,18 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
               </div>
               <p className="text-[8px] text-slate-500 leading-snug">La scelta cartella funziona sui browser compatibili. Su Safari/Firefox/alcuni Android si userà il download standard.</p>
             </div>
+            {showExportTargetDialog && (
+              <div className="rounded-2xl border border-white/10 bg-black/30 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Output target</span>
+                  <button type="button" onClick={() => setShowExportTargetDialog(false)} className="w-7 h-7 rounded-full hover:bg-white/10 text-slate-400">×</button>
+                </div>
+                {canChooseDirectory() && <button type="button" onClick={chooseExportDirectoryTarget} className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary">Scegli cartella</button>}
+                {canChooseOutputFile() && <button type="button" onClick={chooseExportFileTarget} className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary">Scegli file di output</button>}
+                <button type="button" onClick={useExportDownloadTarget} className="w-full px-3 py-2 rounded-xl bg-primary text-left text-[9px] font-bold uppercase tracking-widest text-white">Usa download browser</button>
+                <p className="text-[8px] text-slate-500 leading-snug">{fileSystemUnavailableMessage}</p>
+              </div>
+            )}
             <button onClick={runExport} className="w-full px-5 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20">Esporta</button>
           </div>
         </div>
