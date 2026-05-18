@@ -26,6 +26,7 @@ export default function ExploreHUD({
   onProjectCrsChange,
   onSelectedLayerChange,
   onGoToCoordinate,
+  setActiveTab,
   scaleLocked,
   lockedScaleDenominator,
   toggleScaleLock,
@@ -37,6 +38,7 @@ export default function ExploreHUD({
   const [showScaleInput, setShowScaleInput] = useState(false);
   const [scaleInputValue, setScaleInputValue] = useState('1:10000');
   const [openStatusMenu, setOpenStatusMenu] = useState(null);
+  const [statusMenusLocked, setStatusMenusLocked] = useState(false);
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -57,6 +59,7 @@ export default function ExploreHUD({
   }, [map, showGrid, updateGridPos]);
 
   const activeLayer = layers?.find(l => l.id === selectedLayerId);
+  const hasSelectableLayers = Array.isArray(layers) && layers.length > 0;
   const crsOptions = FALLBACK_CRS.some(crs => crs.code === projectCrs)
     ? FALLBACK_CRS
     : [{ code: projectCrs || 'EPSG:4326', name: 'Selected CRS' }, ...FALLBACK_CRS];
@@ -91,9 +94,17 @@ export default function ExploreHUD({
         <div className="relative min-w-0 w-[48vw] sm:w-64 pointer-events-auto">
           <button
             type="button"
-            onClick={() => setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer')}
-            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'}`}
-            title="Cambia layer attivo"
+            onClick={() => {
+              if (statusMenusLocked) return;
+              if (!hasSelectableLayers) {
+                setOpenStatusMenu(null);
+                setActiveTab?.('new-layer');
+                return;
+              }
+              setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer');
+            }}
+            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+            title={!hasSelectableLayers ? 'Add layer' : statusMenusLocked ? 'Menu bloccati' : 'Cambia layer attivo'}
           >
             {activeLayer ? (
               <>
@@ -105,13 +116,13 @@ export default function ExploreHUD({
               </>
             ) : (
               <>
-                <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
-                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">No layer</span>
+                <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={hasSelectableLayers ? "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 4v16m8-8H4"} /></svg>
+                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">{hasSelectableLayers ? 'No layer' : 'Add layer'}</span>
               </>
             )}
             <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </button>
-          {openStatusMenu === 'layer' && (
+          {openStatusMenu === 'layer' && !statusMenusLocked && hasSelectableLayers && (
             <div className="absolute left-0 top-full mt-1 w-full max-h-48 overflow-y-auto no-scrollbar glass bg-slate-950/95 border border-white/20 rounded-2xl shadow-2xl p-1">
               {layers?.length ? layers.map(layer => (
                 <button
@@ -127,12 +138,33 @@ export default function ExploreHUD({
             </div>
           )}
         </div>
+        <div className="pointer-events-auto flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setStatusMenusLocked(prev => {
+                const next = !prev;
+                if (next) setOpenStatusMenu(null);
+                return next;
+              });
+            }}
+            className={`glass bg-slate-950/85 backdrop-blur-xl w-9 h-9 rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
+            title={statusMenusLocked ? 'Sblocca menu CRS e layer' : 'Blocca menu CRS e layer'}
+            aria-pressed={statusMenusLocked}
+          >
+            {statusMenusLocked ? (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 017.874-1M5 11h12a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2z" /></svg>
+            )}
+          </button>
+        </div>
         <div className="relative w-[42vw] sm:w-52 pointer-events-auto">
           <button
             type="button"
-            onClick={() => setOpenStatusMenu(openStatusMenu === 'crs' ? null : 'crs')}
-            className="w-full glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors"
-            title="Cambia CRS progetto"
+            onClick={() => { if (statusMenusLocked) return; setOpenStatusMenu(openStatusMenu === 'crs' ? null : 'crs'); }}
+            className={`w-full glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+            title={statusMenusLocked ? 'Menu bloccati' : 'Cambia CRS progetto'}
           >
             <div className="flex items-center justify-end gap-2">
               <div className="min-w-0">
@@ -142,7 +174,7 @@ export default function ExploreHUD({
               <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </div>
           </button>
-          {openStatusMenu === 'crs' && (
+          {openStatusMenu === 'crs' && !statusMenusLocked && (
             <div className="absolute right-0 top-full mt-1 w-full max-h-48 overflow-y-auto no-scrollbar glass bg-slate-950/95 border border-white/20 rounded-2xl shadow-2xl p-1">
               {crsOptions.map(crs => (
                 <button

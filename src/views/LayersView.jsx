@@ -234,9 +234,9 @@ export default function LayersView({
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Table of Contents</h2>
       </div>
 
-      <div className="flex-1 w-full glass bg-slate-950/95 light-theme:bg-white/95 rounded-[2rem] sm:rounded-[2.5rem] border border-white/15 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
+      <div className="flex-1 w-full glass bg-slate-950 light-theme:bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-white/25 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
         {/* Header */}
-        <div className="px-4 sm:px-8 py-3 sm:py-4 border-b border-white/5 bg-white/5 flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center">
+        <div className="px-4 sm:px-8 py-3 sm:py-4 border-b border-white/10 bg-slate-950/90 light-theme:bg-white flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Manage Layers</p>
           <div className="relative w-full sm:w-auto">
             <input 
@@ -340,7 +340,7 @@ export default function LayersView({
         </div>
 
         {/* Footer actions */}
-        <div className="px-4 sm:px-10 py-4 sm:py-8 border-t border-white/5 bg-black/20 flex flex-col sm:flex-row gap-3">
+        <div className="px-4 sm:px-10 py-4 sm:py-8 border-t border-white/10 bg-slate-950/90 light-theme:bg-white flex flex-col sm:flex-row gap-3">
           <button 
             onClick={() => setActiveTab('new-layer')}
             className="flex-1 px-6 sm:px-8 py-3 sm:py-4 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20 flex items-center justify-center gap-2 text-xs"
@@ -354,6 +354,15 @@ export default function LayersView({
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
             Import Data
+          </button>
+          <button
+            onClick={() => selectedLayerId && deleteLayer(selectedLayerId)}
+            disabled={!selectedLayerId}
+            className={`flex-1 px-6 sm:px-8 py-3 sm:py-4 border font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 text-xs ${selectedLayerId ? 'bg-red-500/10 text-red-300 border-red-400/30 hover:bg-red-500/20' : 'bg-white/5 text-slate-700 border-white/10 cursor-not-allowed'}`}
+            title="Remove selected layer from project"
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            Remove Selected
           </button>
         </div>
       </div>

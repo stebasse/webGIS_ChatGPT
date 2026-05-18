@@ -967,6 +967,7 @@ export default function App() {
             onProjectCrsChange={(crs) => setSettings(prev => ({ ...prev, projectCrs: crs, crsOverride: true }))}
             onSelectedLayerChange={setSelectedLayerId}
             onGoToCoordinate={goToCoordinate}
+            setActiveTab={setActiveTab}
             scaleLocked={scaleLocked}
             lockedScaleDenominator={lockedScaleDenominator}
             toggleScaleLock={toggleScaleLock}
