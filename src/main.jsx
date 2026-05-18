@@ -32,7 +32,7 @@ class ErrorBoundary extends React.Component {
             }}
             style={{ marginTop: 16, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(56,189,248,.5)', background: 'rgba(56,189,248,.15)', color: '#e0f2fe', fontWeight: 700 }}
           >
-            Reset local data and reload
+            Cancella dati locali e ricarica
           </button>
         </div>
       )

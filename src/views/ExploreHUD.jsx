@@ -63,7 +63,7 @@ export default function ExploreHUD({
   const hasSelectableLayers = Array.isArray(layers) && layers.length > 0;
   const crsOptions = FALLBACK_CRS.some(crs => crs.code === projectCrs)
     ? FALLBACK_CRS
-    : [{ code: projectCrs || 'EPSG:4326', name: 'Selected CRS' }, ...FALLBACK_CRS];
+    : [{ code: projectCrs || 'EPSG:4326', name: 'CRS selezionato' }, ...FALLBACK_CRS];
   const basemapIsDark = activeBasemap === 'carto_dark' || activeBasemap === 'satellite';
   const activeLayerIsPoint = !!activeLayer?.type?.includes('Point');
 
@@ -101,20 +101,20 @@ export default function ExploreHUD({
               setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer');
             }}
             className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
-            title={!hasSelectableLayers ? 'Add layer' : statusMenusLocked ? 'Menu bloccati' : 'Cambia layer attivo'}
+            title={!hasSelectableLayers ? 'Aggiungi layer' : statusMenusLocked ? 'Menu bloccati' : 'Cambia layer attivo'}
           >
             {activeLayer ? (
               <>
                 <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeLayer.colorHex || '#0ea5e9' }} />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Active layer</div>
+                  <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Layer attivo</div>
                   <div className="text-[9px] font-bold text-white uppercase tracking-widest truncate">{activeLayer.name}</div>
                 </div>
               </>
             ) : (
               <>
                 <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={hasSelectableLayers ? "M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" : "M12 4v16m8-8H4"} /></svg>
-                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">{hasSelectableLayers ? 'No layer' : 'Add layer'}</span>
+                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">{hasSelectableLayers ? 'Nessun layer' : 'Aggiungi layer'}</span>
               </>
             )}
             <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -184,7 +184,7 @@ export default function ExploreHUD({
           >
             <div className="flex items-center justify-end gap-2">
               <div className="min-w-0">
-                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Project CRS</div>
+                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">CRS progetto</div>
                 <div className="text-[9px] font-mono font-bold text-primary truncate">{projectCrs || 'EPSG:4326'}</div>
               </div>
               <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -243,26 +243,26 @@ export default function ExploreHUD({
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
-        {/* Measure tool */}
+        {/* Strumento misura */}
         <button
           onClick={toggleMeasureMode}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${measureMode ? 'bg-amber-400/20 border-amber-400 text-amber-300' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title="Measure distance / area"
+          title="Misura distanza / area"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17l6-6 4 4 8-8M5 19h14" /></svg>
-          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{measureMode || 'Measure'}</span>
+          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{measureMode || 'Misura'}</span>
         </button>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
-        {/* Go To coordinates */}
+        {/* Vai a coordinates */}
         <button
           onClick={() => { setShowGoTo(v => !v); setGoToValues(prev => ({ ...prev, crs: projectCrs || prev.crs || 'EPSG:4326' })); }}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${showGoTo ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title="Go To Coordinates"
+          title="Vai a coordinate"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l7 19-7-4-7 4 7-19z" /></svg>
-          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Go To</span>
+          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Vai a</span>
         </button>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
@@ -314,7 +314,7 @@ export default function ExploreHUD({
           <button
             onClick={() => setMapBearing(0)}
             className="flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full hover:bg-white/10 transition-colors"
-            title="Reset North"
+            title="Reimposta nord"
           >
             <div
               className="flex flex-col items-center justify-center transition-transform duration-150"
@@ -345,8 +345,8 @@ export default function ExploreHUD({
         <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-[9px] font-bold text-white uppercase tracking-widest">Go To Coordinates</p>
-              <p className="text-[8px] text-slate-500">Input coordinates in selected CRS</p>
+              <p className="text-[9px] font-bold text-white uppercase tracking-widest">Vai a coordinate</p>
+              <p className="text-[8px] text-slate-500">Inserisci coordinate nel CRS selezionato</p>
             </div>
             <button onClick={() => setShowGoTo(false)} className="text-slate-500 hover:text-white">×</button>
           </div>
@@ -390,7 +390,7 @@ export default function ExploreHUD({
             className={`glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] border transition-all text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ${isFreehandMode ? 'bg-primary/40 border-primary text-white shadow-[0_0_15px_rgba(0,191,255,0.4)]' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-            Freehand
+            Mano libera
           </button>
           <button
             onClick={undoDraftVertex}
@@ -399,7 +399,7 @@ export default function ExploreHUD({
             title="Annulla ultimo vertice"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 14L4 9m0 0l5-5M4 9h11a5 5 0 010 10h-1" /></svg>
-            Undo
+            Annulla
           </button>
           <button
             onClick={clearDraftFeature}
@@ -414,7 +414,7 @@ export default function ExploreHUD({
             className="glass flex items-center gap-2 px-5 py-2.5 rounded-[2rem] bg-emerald-500/20 border border-emerald-500 shadow-lg text-emerald-400 font-bold uppercase tracking-widest text-[9px] hover:bg-emerald-500 hover:text-white transition-all flex-shrink-0"
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-            Finish {drawingMode}
+            Completa {drawingMode === 'Line' ? 'linea' : 'poligono'}
           </button>
         </div>
       )}
@@ -450,7 +450,7 @@ export default function ExploreHUD({
         </div>
       )}
 
-      {/* ── Measurement result banner ───────────────────────────────────── */}
+      {/* ── Risultato misura ───────────────────────────────────── */}
       {measureMode && (
         <div className="absolute bottom-24 sm:bottom-32 right-4 sm:right-6 pointer-events-auto">
           <div className="glass px-4 py-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-xl flex items-center gap-3">
@@ -459,7 +459,7 @@ export default function ExploreHUD({
               <div className="text-xs font-mono text-white">{measureResult || (measureMode === 'Area' ? 'min 3 punti' : 'clicca sulla mappa')}</div>
               <div className="text-[7px] text-white/35 uppercase tracking-widest">{measureCoordinates.length} nodi</div>
             </div>
-            <button onClick={clearMeasure} className="w-7 h-7 rounded-full bg-white/5 hover:bg-red-400/20 text-white/50 hover:text-red-300 transition-all" title="Clear measure">
+            <button onClick={clearMeasure} className="w-7 h-7 rounded-full bg-white/5 hover:bg-red-400/20 text-white/50 hover:text-red-300 transition-all" title="Cancella misura">
               ×
             </button>
           </div>

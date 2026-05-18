@@ -9,7 +9,7 @@ const DEFAULT_FIELDS = [
 const FORMATS = [
   { id: 'geojson', label: 'GeoJSON', ext: '.geojson', supported: true },
   { id: 'kml', label: 'KML', ext: '.kml', supported: true },
-  { id: 'csv', label: 'CSV', ext: '.csv', supported: true, note: 'Points only' },
+  { id: 'csv', label: 'CSV', ext: '.csv', supported: true, note: 'Solo punti' },
   { id: 'gpkg', label: 'GeoPackage', ext: '.gpkg', supported: false },
   { id: 'shp', label: 'Shapefile', ext: '.shp', supported: false },
 ];
@@ -68,7 +68,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       const target = getOutputTargetInfo();
       const handle = await chooseWritableFile({
         suggestedName: target.filename,
-        description: 'Layer file',
+        description: 'File layer',
         accept: target.accept,
       });
       if (!handle) return;
@@ -157,7 +157,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
     setLayers(prev => [...prev, layer]);
     setSelectedLayerId(id);
-    setNewLayer({ name: '', type: 'Point' });
+    setNewLayer({ name: '', type: 'Punto' });
     setFields(DEFAULT_FIELDS);
     setFormat('geojson');
     setDirHandle(null);
@@ -167,27 +167,27 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     setActiveTab('explore');
   };
 
-  const geomTypes = [
-    { id: 'Point', name: 'Point', icon: null },
-    { id: 'Line', name: 'Line', icon: 'M4 12h16' },
-    { id: 'Polygon', name: 'Polygon', icon: 'M4 4h16v16H4z' },
-    { id: 'Table', name: 'Table (no geometry)', icon: 'M4 6h16M4 12h16M4 18h16' }
+  const geomTipos = [
+    { id: 'Punto', name: 'Punto', icon: null },
+    { id: 'Linea', name: 'Linea', icon: 'M4 12h16' },
+    { id: 'Poligono', name: 'Poligono', icon: 'M4 4h16v16H4z' },
+    { id: 'Table', name: 'Tabella (senza geometria)', icon: 'M4 6h16M4 12h16M4 18h16' }
   ];
 
   return (
     <div className="w-full max-w-4xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 sm:mb-6 mt-2 sm:mt-4 w-full text-center">
-        <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Create New Layer</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Crea nuovo layer</h2>
       </div>
 
       <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8 space-y-8">
 
-          {/* Geometry Type */}
+          {/* Tipo geometria */}
           <section>
-            <p className="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest">Geometry Type</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest">Tipo geometria</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {geomTypes.map(type => (
+              {geomTipos.map(type => (
                 <button
                   key={type.id}
                   onClick={() => setNewLayer(prev => ({ ...prev, type: type.id }))}
@@ -195,7 +195,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                 >
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${newLayer.type === type.id ? 'text-primary' : 'text-slate-500'}`}>
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      {type.id === 'Point'
+                      {type.id === 'Punto'
                         ? <circle cx="12" cy="12" r="6" fill="currentColor" fillOpacity="0.4" />
                         : <path d={type.icon} />}
                     </svg>
@@ -206,12 +206,12 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             </div>
           </section>
 
-          {/* Layer Name */}
+          {/* Nome layer */}
           <section className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Layer Name</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome layer</label>
             <input
               type="text"
-              placeholder="e.g. Vegetation_Survey_2024"
+              placeholder="es. Rilievo_Vegetazione_2024"
               value={newLayer.name}
               onChange={(e) => { setNewLayer(prev => ({ ...prev, name: e.target.value })); setErrors(p => ({ ...p, name: null })); }}
               className={`w-full bg-white/5 border rounded-2xl px-4 sm:px-6 py-3 text-sm outline-none transition-all text-white ${errors.name ? 'border-red-500' : 'border-white/10 focus:border-primary'}`}
@@ -219,9 +219,9 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             {errors.name && <p className="text-[10px] text-red-400">{errors.name}</p>}
           </section>
 
-          {/* Output File */}
+          {/* File di output */}
           <section className="space-y-4">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Output File</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">File di output</p>
 
             {/* Format selection */}
             <div className="space-y-2">
@@ -249,38 +249,38 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
             {/* Save folder */}
             <div className="space-y-2">
-              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">Output Folder</label>
+              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">Cartella di output</label>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
                   onClick={chooseFolder}
                   className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-slate-400 hover:border-primary hover:text-white transition-all"
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                  Choose Folder
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                  Scegli output
                 </button>
                 <span className="text-xs text-emerald-400 font-mono break-all flex-1 min-w-0">📁 {getVisibleOutputPath()}</span>
               </div>
             </div>
           </section>
 
-          {/* Attribute Schema */}
+          {/* Schema attributi */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Attribute Schema</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Schema attributi</label>
               <button
                 onClick={addField}
                 className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold text-primary border border-primary/30 rounded-xl hover:bg-primary/10 transition-all uppercase tracking-widest"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                Add Field
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+                Aggiungi campo
               </button>
             </div>
             {errors.fields && <p className="text-[10px] text-red-400">{errors.fields}</p>}
 
             <div className="hidden sm:grid grid-cols-[1fr_120px_120px_36px] gap-2 px-3">
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Field Name</span>
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Type</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">Nome campo</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">Tipo</span>
               <span className="text-[9px] font-bold text-slate-600 uppercase">Default</span>
               <span />
             </div>
@@ -313,7 +313,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                     disabled={fields.length <= 1}
                     className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-all disabled:opacity-20 disabled:cursor-not-allowed"
                   >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                   {/* Mobile row 2 */}
                   <div className="col-span-2 sm:hidden flex gap-2 px-2">
@@ -341,7 +341,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
         <div className="px-4 sm:px-8 py-4 border-t border-white/5 bg-black/20 flex justify-between items-center gap-4">
           <button
             onClick={() => {
-              setNewLayer({ name: '', type: 'Point' });
+              setNewLayer({ name: '', type: 'Punto' });
               setFields(DEFAULT_FIELDS);
               setFormat('geojson');
               setDirHandle(null);
@@ -351,12 +351,12 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
               setActiveTab('explore');
             }}
             className="px-4 sm:px-8 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
-          >Cancel</button>
+          >Annulla</button>
           <button
             onClick={createLayer}
             className="flex-1 sm:flex-none px-8 sm:px-12 py-3 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20"
           >
-            Create Layer
+            Crea layer
           </button>
         </div>
       </div>
@@ -366,7 +366,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
           <div className="glass w-full max-w-xs rounded-[2rem] border border-white/15 shadow-2xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">Output Folder</h3>
+                <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">Cartella di output</h3>
                 <p className="text-[9px] text-slate-500 mt-1 leading-snug">Scegli dove salvare il nuovo layer.</p>
               </div>
               <button type="button" onClick={() => setShowOutputTargetDialog(false)} className="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400">×</button>
@@ -389,7 +389,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             </button>
 
             <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Full path file</div>
+              <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Percorso completo file</div>
               <div className="text-[10px] text-emerald-300 font-mono break-all mt-1">{getVisibleOutputPath()}</div>
             </div>
 

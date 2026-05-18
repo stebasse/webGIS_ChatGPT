@@ -392,7 +392,7 @@ export default function App() {
 
   const createPointFeatureAtPosition = useCallback((position, accuracy = null) => {
     if (layers.length === 0) {
-      alert('Nessun layer presente. Crea prima un layer dalla sezione Layers.');
+      alert('Nessun layer presente. Crea prima un layer dalla sezione Layer.');
       return false;
     }
     const activeLayer = layers.find(l => l.id === selectedLayerId);
@@ -492,7 +492,7 @@ export default function App() {
       properties: {
         id: Date.now(),
         layerId: selectedLayerId,
-        layerName: layer?.name || 'Unknown',
+        layerName: layer?.name || 'Sconosciuto',
         sourceCrs: layerCrs,
         timestamp: new Date().toISOString(),
         ...(buildDefaultProperties(layer))
@@ -678,7 +678,7 @@ export default function App() {
     }
 
     if (layers.length === 0) {
-      alert('Nessun layer presente. Crea prima un layer dalla sezione Layers.');
+      alert('Nessun layer presente. Crea prima un layer dalla sezione Layer.');
       return;
     }
     const activeLayer = layers.find(l => l.id === selectedLayerId);
@@ -827,7 +827,7 @@ export default function App() {
     if (draftSettings.compassMode && !settings.compassMode) {
       const granted = await requestCompassPermission();
       if (!granted) {
-        alert('Permesso orientamento dispositivo negato. Compass Mode disabilitata.');
+        alert('Permesso orientamento dispositivo negato. Modalità bussola disabilitata.');
         setDraftSettings(s => ({ ...s, compassMode: false }));
         return;
       }
@@ -1167,8 +1167,8 @@ export default function App() {
         type="button"
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); openTocSidebar(); }}
         className={`fixed left-3 sm:left-5 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 z-[1000] pointer-events-auto glass w-12 h-12 rounded-2xl border border-white/20 shadow-2xl flex items-center justify-center transition-all ${isTocSidebarOpen ? 'text-white bg-primary/30 border-primary/50' : 'text-primary hover:bg-primary/10'}`}
-        aria-label={isTocSidebarOpen ? 'Close Table of Contents' : 'Open Table of Contents'}
-          title={isTocSidebarOpen ? 'Close Table of Contents' : 'Open Table of Contents'}
+        aria-label={isTocSidebarOpen ? 'Chiudi indice layer' : 'Apri indice layer'}
+          title={isTocSidebarOpen ? 'Chiudi indice layer' : 'Apri indice layer'}
       >
         {tocLayerIcon}
       </button>

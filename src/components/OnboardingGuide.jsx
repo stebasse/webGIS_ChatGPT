@@ -2,52 +2,52 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 const STEPS = [
   {
-    title: 'Welcome to WebGIS',
-    text: 'Quick overview of the main tools before starting.',
-    eyebrow: 'Step 1 / 7',
-    highlight: 'Bottom navigation',
+    title: 'Benvenuto in WebGIS',
+    text: 'Panoramica rapida degli strumenti principali prima di iniziare.',
+    eyebrow: 'Passo 1 / 7',
+    highlight: 'Navigazione inferiore',
     icon: 'M4 6h16M4 12h16M4 18h16'
   },
   {
-    title: 'Explore Mode',
-    text: 'Move around the map, activate GPS and inspect geometries.',
-    eyebrow: 'Step 2 / 7',
-    highlight: 'GPS, compass and basemap tools',
+    title: 'Modalità esplora',
+    text: 'Muoviti nella mappa, attiva il GPS e ispeziona le geometrie.',
+    eyebrow: 'Passo 2 / 7',
+    highlight: 'Strumenti GPS, bussola e mappa base',
     icon: 'M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z'
   },
   {
-    title: 'Layers',
-    text: 'Create, select, activate and manage layers.',
-    eyebrow: 'Step 3 / 7',
-    highlight: 'Layer management section',
+    title: 'Layer',
+    text: 'Crea, seleziona, attiva e gestisci i layer.',
+    eyebrow: 'Passo 3 / 7',
+    highlight: 'Sezione gestione layer',
     icon: 'M12 4l8 4-8 4-8-4 8-4zm0 8l8 4-8 4-8-4 8-4z'
   },
   {
-    title: 'Add Geometry',
-    text: 'Use + to collect points or draw lines and polygons.',
-    eyebrow: 'Step 4 / 7',
-    highlight: '+ button, Finish Drawing and Freehand',
+    title: 'Aggiungi geometria',
+    text: 'Usa + per acquisire punti o disegnare linee e poligoni.',
+    eyebrow: 'Passo 4 / 7',
+    highlight: 'Pulsante +, completa disegno e mano libera',
     icon: 'M12 5v14m7-7H5'
   },
   {
-    title: 'Data Table',
-    text: 'View, edit and export collected features.',
-    eyebrow: 'Step 5 / 7',
-    highlight: 'Attribute table',
+    title: 'Tabella dati',
+    text: 'Visualizza, modifica ed esporta le feature raccolte.',
+    eyebrow: 'Passo 5 / 7',
+    highlight: 'Tabella attributi',
     icon: 'M4 6h16M4 10h16M4 14h16M4 18h16'
   },
   {
-    title: 'Measurement Tool',
-    text: 'Measure distances and areas directly on the map.',
-    eyebrow: 'Step 6 / 7',
-    highlight: 'Ruler button',
+    title: 'Strumento misura',
+    text: 'Misura distanze e aree direttamente sulla mappa.',
+    eyebrow: 'Passo 6 / 7',
+    highlight: 'Pulsante righello',
     icon: 'M3 17l6-6 4 4 8-8M5 19h14'
   },
   {
-    title: 'Done',
-    text: "You're ready to start.",
-    eyebrow: 'Step 7 / 7',
-    highlight: 'Start exploring',
+    title: 'Fatto',
+    text: "Sei pronto per iniziare.",
+    eyebrow: 'Passo 7 / 7',
+    highlight: 'Inizia a esplorare',
     icon: 'M5 13l4 4L19 7'
   }
 ];
@@ -95,7 +95,7 @@ export default function OnboardingGuide({ onFinish }) {
           <p className="text-sm sm:text-base text-slate-300 leading-relaxed mb-5">{step.text}</p>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 mb-6">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Highlight</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">In evidenza</p>
             <p className="text-xs font-bold text-white uppercase tracking-widest">{step.highlight}</p>
           </div>
 
@@ -104,7 +104,7 @@ export default function OnboardingGuide({ onFinish }) {
               onClick={onFinish}
               className="px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-white hover:bg-white/5 transition-all"
             >
-              Skip
+              Salta
             </button>
 
             <div className="flex items-center gap-2">
@@ -113,21 +113,21 @@ export default function OnboardingGuide({ onFinish }) {
                 disabled={isFirst}
                 className="px-4 py-3 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest text-white/70 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
               >
-                Previous
+                Indietro
               </button>
               {isLast ? (
                 <button
                   onClick={onFinish}
                   className="px-5 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
                 >
-                  Start Exploring
+                  Inizia
                 </button>
               ) : (
                 <button
                   onClick={() => setStepIndex(i => Math.min(STEPS.length - 1, i + 1))}
                   className="px-5 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 transition-transform"
                 >
-                  Next
+                  Avanti
                 </button>
               )}
             </div>
