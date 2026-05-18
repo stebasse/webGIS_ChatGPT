@@ -265,7 +265,15 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
         <div className="px-4 sm:px-8 py-4 border-t border-white/5 bg-black/20 flex justify-between items-center gap-4">
           <button
-            onClick={() => setActiveTab('layers')}
+            onClick={() => {
+              setNewLayer({ name: '', type: 'Point' });
+              setFields(DEFAULT_FIELDS);
+              setFormat('geojson');
+              setDirHandle(null);
+              setDirLabel('');
+              setErrors({});
+              setActiveTab('explore');
+            }}
             className="px-4 sm:px-8 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors"
           >Cancel</button>
           <button
