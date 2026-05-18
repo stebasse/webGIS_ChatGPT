@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BASEMAPS } from '../config/constants';
+import { FALLBACK_CRS } from '../services/crsService';
 
 export default function ExploreHUD({
   showGrid, setShowGrid, activeBasemap, setActiveBasemap,
@@ -22,6 +23,8 @@ export default function ExploreHUD({
   gpsCoordinateLabel,
   projectCrs,
   projectCrsInfo,
+  onProjectCrsChange,
+  onSelectedLayerChange,
   onGoToCoordinate,
   scaleLocked,
   lockedScaleDenominator,
@@ -33,6 +36,7 @@ export default function ExploreHUD({
   const [goToValues, setGoToValues] = useState({ x: '', y: '', crs: projectCrs || 'EPSG:4326' });
   const [showScaleInput, setShowScaleInput] = useState(false);
   const [scaleInputValue, setScaleInputValue] = useState('1:10000');
+  const [openStatusMenu, setOpenStatusMenu] = useState(null);
 
   const updateGridPos = useCallback(() => {
     if (!map) return;
@@ -53,6 +57,9 @@ export default function ExploreHUD({
   }, [map, showGrid, updateGridPos]);
 
   const activeLayer = layers?.find(l => l.id === selectedLayerId);
+  const crsOptions = FALLBACK_CRS.some(crs => crs.code === projectCrs)
+    ? FALLBACK_CRS
+    : [{ code: projectCrs || 'EPSG:4326', name: 'Selected CRS' }, ...FALLBACK_CRS];
   const basemapIsDark = activeBasemap === 'carto_dark' || activeBasemap === 'satellite';
 
   const formatDistance = (m) => {
@@ -79,32 +86,82 @@ export default function ExploreHUD({
         />
       )}
 
-      {/* ── Layer / CRS status badges below toolbar ───────────────────────── */}
-      <div className="fixed top-[calc(4.6rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-6 flex items-start justify-between gap-3 pointer-events-none z-[90]">
-        <div className="min-w-0 max-w-[48vw] sm:max-w-xs">
-          {activeLayer ? (
-            <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 flex items-center gap-2 shadow-2xl">
-              <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeLayer.colorHex || '#0ea5e9' }} />
-              <div className="min-w-0">
-                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Active layer</div>
-                <div className="text-[9px] font-bold text-white uppercase tracking-widest truncate">{activeLayer.name}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-amber-500/40 flex items-center gap-2 shadow-2xl">
-              <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
-              <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">No layer</span>
+      {/* ── Layer / CRS status badges ─────────────────────────────────────── */}
+      <div className="fixed top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-6 flex items-start justify-between gap-3 pointer-events-none z-[95]">
+        <div className="relative min-w-0 w-[48vw] sm:w-64 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer')}
+            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'}`}
+            title="Cambia layer attivo"
+          >
+            {activeLayer ? (
+              <>
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: activeLayer.colorHex || '#0ea5e9' }} />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Active layer</div>
+                  <div className="text-[9px] font-bold text-white uppercase tracking-widest truncate">{activeLayer.name}</div>
+                </div>
+              </>
+            ) : (
+              <>
+                <svg className="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest flex-1">No layer</span>
+              </>
+            )}
+            <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {openStatusMenu === 'layer' && (
+            <div className="absolute left-0 top-full mt-1 w-full max-h-48 overflow-y-auto no-scrollbar glass bg-slate-950/95 border border-white/20 rounded-2xl shadow-2xl p-1">
+              {layers?.length ? layers.map(layer => (
+                <button
+                  key={layer.id}
+                  type="button"
+                  onClick={() => { onSelectedLayerChange?.(layer.id); setOpenStatusMenu(null); }}
+                  className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-colors ${selectedLayerId === layer.id ? 'bg-primary/20 text-primary' : 'text-white hover:bg-white/10'}`}
+                >
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layer.colorHex || '#0ea5e9' }} />
+                  <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{layer.name}</span>
+                </button>
+              )) : <div className="px-2.5 py-2 text-[9px] font-bold text-amber-400 uppercase tracking-widest">No layer</div>}
             </div>
           )}
         </div>
-        <div className="glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl max-w-[42vw] sm:max-w-xs">
-          <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Project CRS</div>
-          <div className="text-[9px] font-mono font-bold text-primary truncate">{projectCrs || 'EPSG:4326'}</div>
+        <div className="relative w-[42vw] sm:w-52 pointer-events-auto">
+          <button
+            type="button"
+            onClick={() => setOpenStatusMenu(openStatusMenu === 'crs' ? null : 'crs')}
+            className="w-full glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors"
+            title="Cambia CRS progetto"
+          >
+            <div className="flex items-center justify-end gap-2">
+              <div className="min-w-0">
+                <div className="text-[7px] text-slate-400 uppercase tracking-widest leading-none">Project CRS</div>
+                <div className="text-[9px] font-mono font-bold text-primary truncate">{projectCrs || 'EPSG:4326'}</div>
+              </div>
+              <svg className="w-3 h-3 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </div>
+          </button>
+          {openStatusMenu === 'crs' && (
+            <div className="absolute right-0 top-full mt-1 w-full max-h-48 overflow-y-auto no-scrollbar glass bg-slate-950/95 border border-white/20 rounded-2xl shadow-2xl p-1">
+              {crsOptions.map(crs => (
+                <button
+                  key={crs.code}
+                  type="button"
+                  onClick={() => { onProjectCrsChange?.(crs.code); setGoToValues(prev => ({ ...prev, crs: crs.code })); setOpenStatusMenu(null); }}
+                  className={`w-full px-2.5 py-2 rounded-xl text-right transition-colors ${projectCrs === crs.code ? 'bg-primary/20 text-primary' : 'text-white hover:bg-white/10'}`}
+                >
+                  <span className="block text-[9px] font-mono font-bold truncate">{crs.code}</span>
+                  <span className="block text-[7px] text-slate-500 truncate">{crs.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="absolute top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
+      <div className="absolute top-[calc(4.6rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">

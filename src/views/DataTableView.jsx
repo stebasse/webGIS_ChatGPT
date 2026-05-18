@@ -7,7 +7,6 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
   const [exportDirectoryHandle, setExportDirectoryHandle] = useState(null);
   const [exportFileHandle, setExportFileHandle] = useState(null);
   const [exportDirectoryLabel, setExportDirectoryLabel] = useState('Download browser');
-  const [isExporting, setIsExporting] = useState(false);
   const [exportOptions, setExportOptions] = useState({
     filename: `webgis_export_${new Date().toISOString().split('T')[0]}`,
     extension: 'geojson',
@@ -38,21 +37,11 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
   };
 
   const chooseExportFolder = async () => {
-    setExportDirectoryHandle(null);
-    setExportFileHandle(null);
-
     try {
       if (window.showDirectoryPicker) {
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'downloads' });
-        if (typeof handle.requestPermission === 'function') {
-          const permission = await handle.requestPermission({ mode: 'readwrite' });
-          if (permission !== 'granted') {
-            alert('Permesso di scrittura negato sulla cartella selezionata.');
-            setExportDirectoryLabel('Download browser');
-            return;
-          }
-        }
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
         setExportDirectoryHandle(handle);
+        setExportFileHandle(null);
         setExportDirectoryLabel(handle.name || 'Cartella selezionata');
         return;
       }
@@ -60,64 +49,47 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
       if (window.showSaveFilePicker) {
         const ext = String(exportOptions.extension || 'geojson').replace(/^\./, '').toLowerCase();
         const finalExt = ext === 'json' ? 'json' : ext === 'csv' ? 'csv' : 'geojson';
+        const mime = finalExt === 'csv' ? 'text/csv' : finalExt === 'json' ? 'application/json' : 'application/geo+json';
         const accept = finalExt === 'csv'
           ? { 'text/csv': ['.csv'] }
           : finalExt === 'json'
-            ? { 'application/json': ['.json'] }
-            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'] };
+            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
+            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
         const handle = await window.showSaveFilePicker({
           suggestedName: `${(exportOptions.filename || 'webgis_export').replace(/\.[^.]+$/, '')}.${finalExt}`,
           types: [{ description: 'GIS export', accept }],
           excludeAcceptAllOption: false,
           startIn: 'downloads',
         });
-        if (typeof handle.requestPermission === 'function') {
-          const permission = await handle.requestPermission({ mode: 'readwrite' });
-          if (permission !== 'granted') {
-            alert('Permesso di scrittura negato sul file selezionato.');
-            setExportDirectoryLabel('Download browser');
-            return;
-          }
-        }
         setExportFileHandle(handle);
+        setExportDirectoryHandle(null);
         setExportDirectoryLabel(handle.name || 'File selezionato');
         return;
       }
 
       alert('Questo browser non permette la scelta del percorso. Verrà usato il download standard.');
-      setExportDirectoryLabel('Download browser');
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.error(err);
-        alert(`Non riesco ad accedere al percorso selezionato: ${err?.message || 'errore sconosciuto'}`);
+        alert('Non riesco ad accedere al percorso selezionato.');
       }
-      setExportDirectoryHandle(null);
-      setExportFileHandle(null);
-      setExportDirectoryLabel('Download browser');
     }
   };
 
   const runExport = async () => {
-    if (isExporting) return;
-    setIsExporting(true);
-    try {
-      const layerId = filterLayerId === 'all' ? null : filterLayerId;
-      const crs = exportOptions.crsMode === 'custom' ? exportOptions.customCrs : undefined;
-      const saved = await exportData?.({
-        layerId,
-        filename: exportOptions.filename,
-        extension: exportOptions.extension,
-        crsMode: exportOptions.crsMode,
-        crs,
-        directoryHandle: exportDirectoryHandle,
-        fileHandle: exportFileHandle,
-        pickDirectory: !exportDirectoryHandle && !exportFileHandle,
-        useSaveFilePicker: !exportDirectoryHandle && !exportFileHandle,
-      });
-      if (saved) setShowExportDialog(false);
-    } finally {
-      setIsExporting(false);
-    }
+    const layerId = filterLayerId === 'all' ? null : filterLayerId;
+    const crs = exportOptions.crsMode === 'custom' ? exportOptions.customCrs : undefined;
+    await exportData?.({
+      layerId,
+      filename: exportOptions.filename,
+      extension: exportOptions.extension,
+      crsMode: exportOptions.crsMode,
+      crs,
+      directoryHandle: exportDirectoryHandle,
+      fileHandle: exportFileHandle,
+      useSaveFilePicker: !exportDirectoryHandle && !exportFileHandle,
+    });
+    setShowExportDialog(false);
   };
 
   const standardKeys = new Set(['id', 'layerId', 'layerName', 'timestamp', 'accuracy', 'source', 'sourceCrs', 'exportCrs']);
@@ -214,11 +186,11 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
                   <div className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Percorso</div>
                   <div className="text-[10px] text-white/70 truncate">{exportDirectoryLabel}</div>
                 </div>
-                <button type="button" onClick={chooseExportFolder} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary hover:text-primary">Scegli</button>
+                <button onClick={chooseExportFolder} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary hover:text-primary">Scegli</button>
               </div>
-              <p className="text-[8px] text-slate-500 leading-snug">Se il browser supporta la File System Access API verrà salvato nella cartella scelta. Altrimenti verrà aperto il selettore file o il download standard.</p>
+              <p className="text-[8px] text-slate-500 leading-snug">La scelta cartella funziona sui browser compatibili. Su Safari/Firefox/alcuni Android si userà il download standard.</p>
             </div>
-            <button type="button" onClick={runExport} disabled={isExporting} className="w-full px-5 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20 disabled:opacity-50 disabled:cursor-wait">{isExporting ? 'Salvataggio…' : 'Salva file'}</button>
+            <button onClick={runExport} className="w-full px-5 py-3 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-primary/20">Esporta</button>
           </div>
         </div>
       )}
