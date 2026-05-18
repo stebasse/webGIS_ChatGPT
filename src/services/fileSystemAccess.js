@@ -61,4 +61,55 @@ export const writeTextToFileHandle = async (fileHandle, fileContent, fileMime = 
   await writable.close();
 };
 
-export const fileSystemUnavailableMessage = 'La scelta diretta della cartella non è supportata da questo browser/WebView. Usa Chrome/Edge desktop in HTTPS oppure il salvataggio file/download standard.';
+
+export const chooseDirectoryLabelFallback = async () => new Promise((resolve) => {
+  if (typeof document === 'undefined') {
+    resolve(null);
+    return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.style.position = 'fixed';
+  input.style.left = '-9999px';
+  input.style.top = '-9999px';
+  input.setAttribute('webkitdirectory', '');
+  input.setAttribute('directory', '');
+
+  const cleanup = () => {
+    input.removeEventListener('change', onChange);
+    input.removeEventListener('cancel', onCancel);
+    if (input.parentNode) input.parentNode.removeChild(input);
+  };
+  const onCancel = () => {
+    cleanup();
+    resolve(null);
+  };
+  const onChange = () => {
+    const file = input.files?.[0];
+    const relativePath = file?.webkitRelativePath || file?.name || '';
+    const folderName = relativePath.includes('/') ? relativePath.split('/')[0] : 'Cartella selezionata';
+    cleanup();
+    resolve({ kind: 'readonly-directory', name: folderName });
+  };
+
+  input.addEventListener('change', onChange, { once: true });
+  input.addEventListener('cancel', onCancel, { once: true });
+  document.body.appendChild(input);
+  input.click();
+});
+
+export const downloadTextFileFallback = (filename, fileContent, fileMime = 'text/plain') => {
+  if (typeof document === 'undefined') return;
+  const blob = new Blob([fileContent], { type: fileMime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+export const fileSystemUnavailableMessage = 'La scelta diretta della cartella non è supportata da questo browser/WebView. Se disponibile verrà aperto un selettore cartella di sola lettura; il salvataggio userà il file picker o il download standard.';

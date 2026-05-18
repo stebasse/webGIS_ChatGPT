@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle } from '../services/fileSystemAccess';
+import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, chooseDirectoryLabelFallback, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle, downloadTextFileFallback } from '../services/fileSystemAccess';
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 const DEFAULT_FIELDS = [
@@ -70,6 +70,14 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
         }
       }
 
+      const fallbackDirectory = await chooseDirectoryLabelFallback();
+      if (fallbackDirectory) {
+        setDirHandle(null);
+        setFileHandle(null);
+        setDirLabel(`${fallbackDirectory.name} (download browser)`);
+        return;
+      }
+
       alert(fileSystemUnavailableMessage);
     } catch (e) {
       if (e?.name !== 'AbortError') alert('Impossibile selezionare il percorso: ' + (e?.message || e));
@@ -110,7 +118,8 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       symbology: { mode: 'single', attribute: null, rules: [] }
     };
     const createInitialOutputFile = async () => {
-      if (!dirHandle && !fileHandle) return;
+      const hasFallbackDownloadTarget = Boolean(dirLabel && !dirHandle && !fileHandle);
+      if (!dirHandle && !fileHandle && !hasFallbackDownloadTarget) return;
       const initialContent = format === 'csv'
         ? fields.filter(f => f.name.trim()).map(f => f.name.trim()).join(',') + '\n'
         : format === 'kml'
@@ -119,6 +128,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       const target = getOutputTargetInfo();
       if (dirHandle) await writeTextToDirectory(dirHandle, target.filename, initialContent, target.mime);
       if (fileHandle) await writeTextToFileHandle(fileHandle, initialContent, target.mime);
+      if (!dirHandle && !fileHandle && hasFallbackDownloadTarget) downloadTextFileFallback(target.filename, initialContent, target.mime);
     };
 
     createInitialOutputFile().catch(err => {

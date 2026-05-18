@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
+import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, chooseDirectoryLabelFallback, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
 
 export default function DataTableView({ collectedPoints, setCollectedPoints, layers, exportData, projectCrs = 'EPSG:4326' }) {
   const [filterLayerId, setFilterLayerId] = useState('all');
@@ -75,6 +75,14 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
           setExportDirectoryLabel(handle.name || 'File selezionato');
           return;
         }
+      }
+
+      const fallbackDirectory = await chooseDirectoryLabelFallback();
+      if (fallbackDirectory) {
+        setExportDirectoryHandle(null);
+        setExportFileHandle(null);
+        setExportDirectoryLabel(`${fallbackDirectory.name} (download browser)`);
+        return;
       }
 
       alert(fileSystemUnavailableMessage + ' Verrà usato il download standard quando premi Esporta.');
