@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle } from '../services/fileSystemAccess';
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 const DEFAULT_FIELDS = [
@@ -13,8 +14,6 @@ const FORMATS = [
   { id: 'shp', label: 'Shapefile', ext: '.shp', supported: false },
 ];
 
-const canChooseDirectory = () => typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function';
-const canChooseOutputFile = () => typeof window !== 'undefined' && typeof window.showSaveFilePicker === 'function';
 
 export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, layers, setLayers, setSelectedLayerId, projectCrs = 'EPSG:4326' }) {
   const [fields, setFields] = useState(DEFAULT_FIELDS);
@@ -33,48 +32,47 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   const updateField = (idx, key, value) =>
     setFields(prev => prev.map((f, i) => i === idx ? { ...f, [key]: value } : f));
 
+  const getOutputTargetInfo = () => {
+    const selectedFormat = FORMATS.find(f => f.id === format);
+    const ext = selectedFormat?.ext || '.geojson';
+    const baseName = (newLayer.name?.trim() || 'new_layer').replace(/[^a-z0-9_-]+/gi, '_');
+    const mime = format === 'csv' ? 'text/csv' : format === 'kml' ? 'application/vnd.google-earth.kml+xml' : 'application/geo+json';
+    const accept = format === 'csv'
+      ? { 'text/csv': ['.csv'] }
+      : format === 'kml'
+        ? { 'application/vnd.google-earth.kml+xml': ['.kml'], 'text/xml': ['.kml'] }
+        : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
+    return { ext, baseName, mime, accept, filename: `${baseName}${ext}` };
+  };
+
   const chooseFolder = async () => {
     try {
-      if (canChooseDirectory()) {
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        if (handle?.requestPermission) {
-          const permission = await handle.requestPermission({ mode: 'readwrite' });
-          if (permission !== 'granted') {
-            alert('Permesso di scrittura non concesso per la cartella selezionata.');
-            return;
-          }
-        }
-        setDirHandle(handle);
+      const directoryHandle = await chooseWritableDirectory();
+      if (directoryHandle) {
+        setDirHandle(directoryHandle);
         setFileHandle(null);
-        setDirLabel(handle.name || 'Cartella selezionata');
+        setDirLabel(directoryHandle.name || 'Cartella selezionata');
         return;
       }
 
       if (canChooseOutputFile()) {
-        const selectedFormat = FORMATS.find(f => f.id === format);
-        const ext = selectedFormat?.ext || '.geojson';
-        const baseName = (newLayer.name?.trim() || 'new_layer').replace(/[^a-z0-9_-]+/gi, '_');
-        const mime = format === 'csv' ? 'text/csv' : format === 'kml' ? 'application/vnd.google-earth.kml+xml' : 'application/geo+json';
-        const accept = format === 'csv'
-          ? { 'text/csv': ['.csv'] }
-          : format === 'kml'
-            ? { 'application/vnd.google-earth.kml+xml': ['.kml'], 'text/xml': ['.kml'] }
-            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'] };
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `${baseName}${ext}`,
-          types: [{ description: 'Layer file', accept }],
-          excludeAcceptAllOption: false,
-          startIn: 'downloads',
+        const target = getOutputTargetInfo();
+        const handle = await chooseWritableFile({
+          suggestedName: target.filename,
+          description: 'Layer file',
+          accept: target.accept,
         });
-        setFileHandle(handle);
-        setDirHandle(null);
-        setDirLabel(handle.name || 'File selezionato');
-        return;
+        if (handle) {
+          setFileHandle(handle);
+          setDirHandle(null);
+          setDirLabel(handle.name || 'File selezionato');
+          return;
+        }
       }
 
-      alert('Questo browser non permette la scelta della cartella. Il layer potrà comunque essere creato nel progetto.');
+      alert(fileSystemUnavailableMessage);
     } catch (e) {
-      if (e?.name !== 'AbortError') alert('Impossibile selezionare la cartella: ' + (e?.message || e));
+      if (e?.name !== 'AbortError') alert('Impossibile selezionare il percorso: ' + (e?.message || e));
     }
   };
 
@@ -111,6 +109,23 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       dirLabel: dirLabel || null,
       symbology: { mode: 'single', attribute: null, rules: [] }
     };
+    const createInitialOutputFile = async () => {
+      if (!dirHandle && !fileHandle) return;
+      const initialContent = format === 'csv'
+        ? fields.filter(f => f.name.trim()).map(f => f.name.trim()).join(',') + '\n'
+        : format === 'kml'
+          ? '<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document></Document></kml>'
+          : JSON.stringify({ type: 'FeatureCollection', name: layer.name, crs: { type: 'name', properties: { name: layer.crs } }, features: [] }, null, 2);
+      const target = getOutputTargetInfo();
+      if (dirHandle) await writeTextToDirectory(dirHandle, target.filename, initialContent, target.mime);
+      if (fileHandle) await writeTextToFileHandle(fileHandle, initialContent, target.mime);
+    };
+
+    createInitialOutputFile().catch(err => {
+      console.error(err);
+      alert('Layer creato nel progetto, ma non riesco a scrivere il file nel percorso scelto.');
+    });
+
     setLayers(prev => [...prev, layer]);
     setSelectedLayerId(id);
     setNewLayer({ name: '', type: 'Point' });

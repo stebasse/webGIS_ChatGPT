@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
 
 export default function DataTableView({ collectedPoints, setCollectedPoints, layers, exportData, projectCrs = 'EPSG:4326' }) {
   const [filterLayerId, setFilterLayerId] = useState('all');
@@ -36,42 +37,51 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
     setShowExportDialog(true);
   };
 
+  const getExportTargetInfo = () => {
+    const ext = String(exportOptions.extension || 'geojson').replace(/^\./, '').toLowerCase();
+    const finalExt = ext === 'json' ? 'json' : ext === 'csv' ? 'csv' : 'geojson';
+    const accept = finalExt === 'csv'
+      ? { 'text/csv': ['.csv'] }
+      : finalExt === 'json'
+        ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
+        : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
+    return {
+      finalExt,
+      accept,
+      suggestedName: `${(exportOptions.filename || 'webgis_export').replace(/\.[^.]+$/, '')}.${finalExt}`,
+    };
+  };
+
   const chooseExportFolder = async () => {
     try {
-      if (window.showDirectoryPicker) {
-        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        setExportDirectoryHandle(handle);
+      const directoryHandle = await chooseWritableDirectory();
+      if (directoryHandle) {
+        setExportDirectoryHandle(directoryHandle);
         setExportFileHandle(null);
-        setExportDirectoryLabel(handle.name || 'Cartella selezionata');
+        setExportDirectoryLabel(directoryHandle.name || 'Cartella selezionata');
         return;
       }
 
-      if (window.showSaveFilePicker) {
-        const ext = String(exportOptions.extension || 'geojson').replace(/^\./, '').toLowerCase();
-        const finalExt = ext === 'json' ? 'json' : ext === 'csv' ? 'csv' : 'geojson';
-        const mime = finalExt === 'csv' ? 'text/csv' : finalExt === 'json' ? 'application/json' : 'application/geo+json';
-        const accept = finalExt === 'csv'
-          ? { 'text/csv': ['.csv'] }
-          : finalExt === 'json'
-            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
-            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `${(exportOptions.filename || 'webgis_export').replace(/\.[^.]+$/, '')}.${finalExt}`,
-          types: [{ description: 'GIS export', accept }],
-          excludeAcceptAllOption: false,
-          startIn: 'downloads',
+      if (canChooseOutputFile()) {
+        const target = getExportTargetInfo();
+        const handle = await chooseWritableFile({
+          suggestedName: target.suggestedName,
+          description: 'GIS export',
+          accept: target.accept,
         });
-        setExportFileHandle(handle);
-        setExportDirectoryHandle(null);
-        setExportDirectoryLabel(handle.name || 'File selezionato');
-        return;
+        if (handle) {
+          setExportFileHandle(handle);
+          setExportDirectoryHandle(null);
+          setExportDirectoryLabel(handle.name || 'File selezionato');
+          return;
+        }
       }
 
-      alert('Questo browser non permette la scelta del percorso. Verrà usato il download standard.');
+      alert(fileSystemUnavailableMessage + ' Verrà usato il download standard quando premi Esporta.');
     } catch (err) {
       if (err?.name !== 'AbortError') {
         console.error(err);
-        alert('Non riesco ad accedere al percorso selezionato.');
+        alert('Non riesco ad accedere al percorso selezionato: ' + (err?.message || err));
       }
     }
   };

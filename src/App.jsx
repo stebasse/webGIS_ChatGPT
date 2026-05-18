@@ -22,6 +22,7 @@ import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
 import OnboardingGuide from './components/OnboardingGuide';
 import { transformCoord, transformFeature, transformGeometry, formatCoordinate, distanceInCrs, areaInCrs, getCrsInfo, getCrsCode, downloadTextFile, prjTextForCRS } from './services/crsService';
+import { writeTextToDirectory, writeTextToFileHandle, chooseWritableFile, canChooseOutputFile } from './services/fileSystemAccess';
 
 // Resolve a feature's display color given its layer and symbology rules
 function resolveFeatureColor(feature, layer) {
@@ -745,44 +746,29 @@ export default function App() {
       filename = `${filenameBase}.${extension === 'json' ? 'json' : 'geojson'}`;
     }
 
-    const writeFileToDirectory = async (directoryHandle, fileName, fileContent, fileMime) => {
-      const fileHandle = await directoryHandle.getFileHandle(fileName, { create: true });
-      const writable = await fileHandle.createWritable();
-      await writable.write(new Blob([fileContent], { type: fileMime }));
-      await writable.close();
-    };
-
     try {
-      const writeFileHandle = async (fileHandle, fileContent, fileMime) => {
-        const writable = await fileHandle.createWritable();
-        await writable.write(new Blob([fileContent], { type: fileMime }));
-        await writable.close();
-      };
-
       if (options.directoryHandle) {
-        await writeFileToDirectory(options.directoryHandle, filename, content, mime);
+        await writeTextToDirectory(options.directoryHandle, filename, content, mime);
         if (extension !== 'csv') {
-          await writeFileToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+          await writeTextToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
         }
       } else if (options.fileHandle) {
-        await writeFileHandle(options.fileHandle, content, mime);
+        await writeTextToFileHandle(options.fileHandle, content, mime);
         if (extension !== 'csv') {
           downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
         }
-      } else if (options.useSaveFilePicker && window.showSaveFilePicker) {
-        const fileExt = filename.split('.').pop();
+      } else if (options.useSaveFilePicker && canChooseOutputFile()) {
         const accept = extension === 'csv'
           ? { 'text/csv': ['.csv'] }
           : extension === 'json'
             ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
             : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
-        const handle = await window.showSaveFilePicker({
+        const handle = await chooseWritableFile({
           suggestedName: filename,
-          types: [{ description: 'GIS export', accept }],
-          excludeAcceptAllOption: false,
-          startIn: 'downloads',
+          description: 'GIS export',
+          accept,
         });
-        await writeFileHandle(handle, content, mime);
+        await writeTextToFileHandle(handle, content, mime);
         if (extension !== 'csv') {
           downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
         }
