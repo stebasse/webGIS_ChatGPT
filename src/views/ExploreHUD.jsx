@@ -228,14 +228,18 @@ export default function ExploreHUD({
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
         {/* Grid toggle */}
-        <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer group flex-shrink-0">
-          <div className="relative">
-            <input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} className="sr-only" />
-            <div className={`w-7 sm:w-9 h-4 sm:h-5 rounded-full border border-white/20 transition-all ${showGrid ? 'bg-primary border-primary' : 'bg-white/5'}`} />
-            <div className={`absolute top-0.5 sm:top-1 left-0.5 sm:left-1 w-3 h-3 bg-white rounded-full transition-all ${showGrid ? 'translate-x-3 sm:translate-x-4' : 'translate-x-0'}`} />
-          </div>
-          <span className="text-[8px] sm:text-[10px] font-bold text-white/50 uppercase tracking-widest group-hover:text-white transition-colors hidden xs:inline">Grid</span>
-        </label>
+        <button
+          type="button"
+          onClick={() => setShowGrid(!showGrid)}
+          className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all flex-shrink-0 ${showGrid ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+          title={showGrid ? 'Nascondi griglia' : 'Mostra griglia'}
+          aria-label={showGrid ? 'Nascondi griglia' : 'Mostra griglia'}
+          aria-pressed={showGrid}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16" />
+          </svg>
+        </button>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
@@ -247,18 +251,6 @@ export default function ExploreHUD({
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17l6-6 4 4 8-8M5 19h14" /></svg>
           <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{measureMode || 'Measure'}</span>
-        </button>
-
-        <div className="w-px h-3 bg-white/10 flex-shrink-0" />
-
-        {/* Point tap placement */}
-        <button
-          onClick={() => setPointTapMode?.(!pointTapMode)}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${pointTapMode ? 'bg-emerald-400/20 border-emerald-400 text-emerald-300' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title="Aggiungi punti cliccando sulla mappa"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
-          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Tap point</span>
         </button>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
@@ -427,26 +419,18 @@ export default function ExploreHUD({
         </div>
       )}
 
-      {/* ── Point tap placement big control ───────────────────────────── */}
+      {/* ── Point tap placement control ───────────────────────────── */}
       {activeLayerIsPoint && !drawingMode && !measureMode && (
-        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto z-[90] w-[min(92vw,420px)]">
+        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto z-[90] flex items-center gap-2 max-w-[96vw] overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setPointTapMode?.(!pointTapMode)}
-            className={`w-full glass rounded-[2rem] border px-5 py-4 shadow-2xl transition-all flex items-center justify-center gap-3 ${pointTapMode ? 'bg-emerald-400/25 border-emerald-300 text-white shadow-[0_0_24px_rgba(52,211,153,0.35)]' : 'bg-slate-950/80 border-white/20 text-white hover:border-emerald-300'}`}
+            className={`glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] border transition-all text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ${pointTapMode ? 'bg-primary/40 border-primary text-white shadow-[0_0_15px_rgba(0,191,255,0.4)]' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
             title={pointTapMode ? 'Disattiva inserimento punti da mappa' : 'Attiva inserimento punti da mappa'}
             aria-pressed={pointTapMode}
           >
-            <span className={`w-10 h-10 rounded-full flex items-center justify-center border ${pointTapMode ? 'bg-emerald-300 text-slate-950 border-emerald-200' : 'bg-white/10 text-emerald-300 border-white/20'}`}>
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span className="block text-[11px] sm:text-xs font-black uppercase tracking-[0.22em]">{pointTapMode ? 'Inserimento punti attivo' : 'Aggiungi punti dalla mappa'}</span>
-              <span className="block text-[8px] sm:text-[9px] text-white/55 uppercase tracking-widest mt-0.5">{pointTapMode ? 'tocca la mappa; pan con due dita senza creare punti' : 'tocca per attivare il tap sui punti dello schermo'}</span>
-            </span>
-            {pointTapMode && (
-              <span className="w-8 h-8 rounded-full bg-red-500/20 text-red-200 flex items-center justify-center text-xl leading-none">×</span>
-            )}
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
+            {pointTapMode ? 'Tap point attivo' : 'Tap point'}
           </button>
         </div>
       )}

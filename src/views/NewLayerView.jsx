@@ -164,7 +164,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     setFileHandle(null);
     setDirLabel('');
     setErrors({});
-    setActiveTab('layers');
+    setActiveTab('explore');
   };
 
   const geomTypes = [
