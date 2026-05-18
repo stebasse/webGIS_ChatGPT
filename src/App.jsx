@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Polygon, ScaleControl } from 'react-leaflet';
+import { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-rotate';
 
-import { LAYERS, BASEMAPS } from './config/constants';
-import { usePersistentState } from './hooks/usePersistentState';
+import { BASEMAPS } from './config/constants';
 import { useDeviceCompass } from './hooks/useDeviceCompass';
+import { useGpsTracking } from './hooks/useGpsTracking';
+import { useOnboardingGuide } from './hooks/useOnboardingGuide';
+import { useProjectCrs } from './hooks/useProjectCrs';
+import { useSettingsDraft } from './hooks/useSettingsDraft';
 
 import MapController from './components/Map/MapController';
 import MapEvents from './components/Map/MapEvents';
@@ -22,32 +25,19 @@ import DataTableView from './views/DataTableView';
 import SettingsView from './views/SettingsView';
 import { t } from './i18n';
 import OnboardingGuide from './components/OnboardingGuide';
-import { transformCoord, transformFeature, transformGeometry, formatCoordinate, distanceInCrs, areaInCrs, getCrsInfo, getCrsCode, downloadTextFile, prjTextForCRS } from './services/crsService';
-import { writeTextToDirectory, writeTextToFileHandle, chooseWritableFile, canChooseOutputFile } from './services/fileSystemAccess';
-
-// Resolve a feature's display color given its layer and symbology rules
-function resolveFeatureColor(feature, layer) {
-  if (!layer) return '#0ea5e9';
-  const base = layer.colorHex || '#0ea5e9';
-  const sym = layer.symbology;
-  if (!sym || sym.mode !== 'categorized' || !sym.attribute || !sym.rules?.length) return base;
-  const attrVal = String(feature.properties?.[sym.attribute] ?? '');
-  const match = sym.rules.find(r => String(r.value) === attrVal);
-  return match ? match.color : base;
-}
-
-const DEFAULT_SETTINGS = {
-  theme: 'dark', units: 'metric', crsOverride: false, projectCrs: 'EPSG:4326',
-  gpu: true, logLevel: 'low', compassMode: false, language: 'it'
-};
-
-const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
+import { transformCoord, formatCoordinate, getCrsCode } from './services/crsService';
+import { FIELD_TYPES, EMPTY_NEW_LAYER, EMPTY_NEW_FIELD } from './state/defaults';
+import { useProjectState } from './state/useProjectState';
+import { resolveFeatureColor } from './services/symbologyService';
+import { formatMeasureValue as formatMeasurementValue } from './services/measurementService';
+import { buildDefaultProperties, coerceFieldValue, createDraftTableFeature, getDefaultValueForType, getFieldType } from './services/featureService';
+import { exportFeatures } from './services/exportService';
 
 const goToIcon = new L.DivIcon({
   className: '',
   iconSize: [32, 32],
   iconAnchor: [16, 16],
-  html: `<div style="width:32px;height:32px;border-radius:9999px;background:#f97316;border:3px solid #fff;box-shadow:0 0 18px rgba(249,115,22,.9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;">+<\/div>`
+  html: `<div style="width:32px;height:32px;border-radius:9999px;background:#f97316;border:3px solid #fff;box-shadow:0 0 18px rgba(249,115,22,.9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:16px;">+</div>`
 });
 
 export default function App() {
@@ -56,112 +46,55 @@ export default function App() {
   const [showGrid, setShowGrid] = useState(false);
   const [activeBasemap, setActiveBasemap] = useState('carto_dark');
 
-  // Persistent state
-  const [layers, setLayers] = usePersistentState('stitch_gis_layers', LAYERS);
-  const [collectedPoints, setCollectedPoints] = usePersistentState('stitch_gis_points', []);
-  const [settings, setSettings] = usePersistentState('stitch_gis_settings', DEFAULT_SETTINGS);
-  const [selectedLayerId, setSelectedLayerId] = usePersistentState('stitch_gis_selected_layer', null);
+  const {
+    layers,
+    setLayers,
+    collectedPoints,
+    setCollectedPoints,
+    settings,
+    setSettings,
+    selectedLayerId,
+    setSelectedLayerId,
+  } = useProjectState();
 
-  // Validate selectedLayerId points to a real layer
-  useEffect(() => {
-    if (selectedLayerId !== null && !layers.find(l => l.id === selectedLayerId)) {
-      setSelectedLayerId(layers.length > 0 ? layers[0].id : null);
-    }
-  }, [layers, selectedLayerId, setSelectedLayerId]);
-
-
-  // Log verbosity
-  useEffect(() => {
-    window.__GIS_DEBUG__ = settings.logLevel === 'high';
-  }, [settings.logLevel]);
-
-  const [draftSettings, setDraftSettings] = useState(settings);
-  const [gpsState, setGpsState] = useState({ position: null, accuracy: null, tracking: false });
   const [mapBearing, setMapBearing] = useState(0);
   const [gridScaleMeters, setGridScaleMeters] = useState(100);
   const [drawingMode, setDrawingMode] = useState(false);  // false | 'Line' | 'Polygon'
   const [draftCoordinates, setDraftCoordinates] = useState([]);
   const [layerFilter, setLayerFilter] = useState('');
-  const [newLayer, setNewLayer] = useState({ name: '', type: 'Point' });
-  const language = settings.language || 'it';
-  const [uploadSearch, setUploadSearch] = useState('');
-  const [selectedUpload, setSelectedUpload] = useState(null);
+  const [newLayer, setNewLayer] = useState(EMPTY_NEW_LAYER);
   const [popupFeature, setPopupFeature] = useState(null);
   const [isEditingPopup, setIsEditingPopup] = useState(false);
   const [isFreehandMode, setIsFreehandMode] = useState(false);
   const [pointTapMode, setPointTapMode] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [showAddFieldForm, setShowAddFieldForm] = useState(false);
-  const [newPopupField, setNewPopupField] = useState({ name: '', type: 'String' });
+  const [newPopupField, setNewPopupField] = useState(EMPTY_NEW_FIELD);
   const [measureMode, setMeasureMode] = useState(false); // false | 'Distance' | 'Area'
   const [measureCoordinates, setMeasureCoordinates] = useState([]);
   const [goToMarker, setGoToMarker] = useState(null);
   const [scaleLocked, setScaleLocked] = useState(false);
   const [lockedScaleDenominator, setLockedScaleDenominator] = useState(null);
 
-  // Apply theme class to <html>; preview draft theme immediately while Settings is open.
-  useEffect(() => {
-    const activeTheme = activeTab === 'settings' ? draftSettings.theme : settings.theme;
-    document.documentElement.classList.toggle('light-theme', activeTheme === 'light');
-  }, [settings.theme, draftSettings.theme, activeTab]);
-
-  useEffect(() => {
-    setDraftSettings(settings);
-  }, [settings]);
-
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    try {
-      return localStorage.getItem('webgis_onboarding_completed') !== 'true';
-    } catch {
-      return true;
-    }
+  const { draftSettings, setDraftSettings, language, saveSettings } = useSettingsDraft({
+    settings,
+    setSettings,
+    activeTab,
+    onSaved: () => setActiveTab('explore'),
   });
 
-
-  const finishOnboarding = useCallback(() => {
-    try {
-      localStorage.setItem('webgis_onboarding_completed', 'true');
-    } catch {
-      // localStorage may be unavailable in private mode; still close the guide for this session.
-    }
-    setShowOnboarding(false);
-  }, []);
-
-  const showTutorialAgain = useCallback(() => {
-    try {
-      localStorage.removeItem('webgis_onboarding_completed');
-    } catch {
-      // Ignore storage errors and reopen in the current session.
-    }
-    setShowOnboarding(true);
-    setActiveTab('explore');
-  }, []);
+  const { showOnboarding, finishOnboarding, showTutorialAgain } = useOnboardingGuide({
+    onReplay: () => setActiveTab('explore'),
+  });
 
   const deviceHeading = useDeviceCompass();
-  const projectCrs = settings.crsOverride ? (settings.projectCrs || 'EPSG:4326') : 'EPSG:4326';
-  const projectCrsInfo = getCrsInfo(projectCrs);
-
-  // Ensure every layer has CRS metadata. Existing user data remains untouched.
-  useEffect(() => {
-    setLayers(prev => prev.map(layer => ({
-      ...layer,
-      crs: getCrsCode(layer.crs || layer.sourceCrs || 'EPSG:4326'),
-      sourceCrs: getCrsCode(layer.sourceCrs || layer.crs || 'EPSG:4326'),
-      displayCrs: projectCrs,
-    })));
-  }, [projectCrs, setLayers]);
-
-  const getFeatureSourceCrs = useCallback((feature, layer) => getCrsCode(feature?.properties?.sourceCrs || layer?.sourceCrs || layer?.crs || 'EPSG:4326'), []);
-
-  const geometryToWgs84 = useCallback((feature, layer) => {
-    const source = getFeatureSourceCrs(feature, layer);
-    return source === 'EPSG:4326' ? feature.geometry : transformGeometry(feature.geometry, source, 'EPSG:4326');
-  }, [getFeatureSourceCrs]);
-
-  const coordinatesToLayerCrs = useCallback((coords, layer) => {
-    const layerCrs = getCrsCode(layer?.crs || layer?.sourceCrs || 'EPSG:4326');
-    return layerCrs === 'EPSG:4326' ? coords : transformCoord(coords, 'EPSG:4326', layerCrs);
-  }, []);
+  const {
+    projectCrs,
+    projectCrsInfo,
+    getFeatureSourceCrs,
+    geometryToWgs84,
+    coordinatesToLayerCrs,
+  } = useProjectCrs({ settings, setLayers });
 
   useEffect(() => {
     if (activeTab !== 'explore') setIsTocSidebarOpen(false);
@@ -192,134 +125,15 @@ export default function App() {
   };
 
   // ── GPS ──────────────────────────────────────────────────────────────────
-  const gpsWatchRef = useRef(null);
   const [map, setMap] = useState(null);
+  const { gpsState, locateMe } = useGpsTracking();
 
-  // Cleanup GPS watch on unmount
-  useEffect(() => {
-    return () => {
-      if (gpsWatchRef.current !== null) {
-        navigator.geolocation.clearWatch(gpsWatchRef.current);
-      }
-    };
-  }, []);
-
-  const locateMe = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation non è supportata da questo browser.');
-      return;
-    }
-
-    if (gpsState.tracking && gpsWatchRef.current !== null) {
-      navigator.geolocation.clearWatch(gpsWatchRef.current);
-      gpsWatchRef.current = null;
-      setGpsState(prev => ({ ...prev, tracking: false }));
-      return;
-    }
-
-    // Check for Secure Context (HTTPS or Localhost) before starting
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const isSecure = window.isSecureContext;
-
-    if (!isSecure && !isLocal) {
-      alert(
-        "GPS BLOCCATO (CONTESTO NON SICURO)\n\n" +
-        "Il browser impedisce l'uso del GPS su connessioni HTTP non criptate (come l'accesso via IP locale: " + window.location.hostname + ").\n\n" +
-        "Per attivare il GPS su questo dispositivo:\n" +
-        "1. Usa un tunnel HTTPS (es. ngrok o certificati locali).\n" +
-        "2. Accedi all'app tramite 'localhost' (se sei sul PC che esegue il server).\n" +
-        "3. (Solo Chrome/Edge) Abilita l'indirizzo nelle impostazioni avanzate: chrome://flags/#unsafely-treat-insecure-origin-as-secure aggiungendo questo URL."
-      );
-      return;
-    }
-
-    setGpsState(prev => ({ ...prev, tracking: true }));
-    gpsWatchRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        setGpsState({
-          position: [pos.coords.longitude, pos.coords.latitude],
-          accuracy: pos.coords.accuracy,
-          tracking: true
-        });
-      },
-      (error) => {
-        const msgs = {
-          1: 'Permesso negato. Abilita la localizzazione nelle impostazioni del browser per questo sito.',
-          2: 'Posizione non disponibile. Assicurati di avere il GPS attivo sul dispositivo.',
-          3: 'Timeout. Il GPS non ha risposto in tempo. Riprova.'
-        };
-        alert('Errore GPS: ' + (msgs[error.code] || error.message));
-        setGpsState(prev => ({ ...prev, tracking: false }));
-        gpsWatchRef.current = null;
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  };
-
-  // ── Compass permission (iOS Safari) ──────────────────────────────────────
-  const requestCompassPermission = async () => {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const res = await DeviceOrientationEvent.requestPermission();
-        return res === 'granted';
-      } catch { return false; }
-    }
-    return true; // not iOS, no permission needed
-  };
-
-  // ── Measurement helpers ────────────────────────────────────────────────
-  const toRad = (deg) => deg * Math.PI / 180;
-
-  const segmentDistanceMeters = (a, b) => {
-    const R = 6371008.8;
-    const dLat = toRad(b[1] - a[1]);
-    const dLon = toRad(b[0] - a[0]);
-    const lat1 = toRad(a[1]);
-    const lat2 = toRad(b[1]);
-    const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-    return 2 * R * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-  };
-
-  const measureDistanceMeters = (coords) => {
-    const projected = settings.crsOverride ? distanceInCrs(coords, projectCrs) : null;
-    if (typeof projected === 'number') return projected;
-    return coords.slice(1).reduce((sum, c, i) => sum + segmentDistanceMeters(coords[i], c), 0);
-  };
-
-  const measureAreaSqMeters = (coords) => {
-    if (coords.length < 3) return 0;
-    const projectedArea = settings.crsOverride ? areaInCrs(coords, projectCrs) : null;
-    if (typeof projectedArea === 'number') return projectedArea;
-    const R = 6371008.8;
-    const lat0 = toRad(coords.reduce((sum, c) => sum + c[1], 0) / coords.length);
-    const projected = coords.map(([lng, lat]) => [R * toRad(lng) * Math.cos(lat0), R * toRad(lat)]);
-    let area = 0;
-    for (let i = 0; i < projected.length; i++) {
-      const [x1, y1] = projected[i];
-      const [x2, y2] = projected[(i + 1) % projected.length];
-      area += x1 * y2 - x2 * y1;
-    }
-    return Math.abs(area) / 2;
-  };
-
-  const formatMeasureValue = (mode, coords) => {
-    if (!mode || coords.length === 0) return '';
-    if (mode === 'Distance') {
-      const m = measureDistanceMeters(coords);
-      if (settings.units === 'imperial') {
-        const ft = m * 3.28084;
-        return ft >= 5280 ? `${(ft / 5280).toFixed(2)} mi` : `${ft.toFixed(1)} ft`;
-      }
-      return m >= 1000 ? `${(m / 1000).toFixed(3)} km` : `${m.toFixed(2)} m`;
-    }
-    const sqm = measureAreaSqMeters(coords);
-    if (settings.units === 'imperial') {
-      const sqft = sqm * 10.7639;
-      return sqft >= 43560 ? `${(sqft / 43560).toFixed(3)} ac` : `${sqft.toFixed(1)} ft²`;
-    }
-    return sqm >= 10000 ? `${(sqm / 10000).toFixed(4)} ha` : `${sqm.toFixed(2)} m²`;
-  };
+  // ── Measurement state/actions ───────────────────────────────────────────
+  const formatMeasureValue = useCallback((mode, coords) => formatMeasurementValue(mode, coords, {
+    units: settings.units,
+    useProjectCrs: settings.crsOverride,
+    projectCrs,
+  }), [settings.units, settings.crsOverride, projectCrs]);
 
   const toggleMeasureMode = () => {
     setDrawingMode(false);
@@ -513,29 +327,6 @@ export default function App() {
   };
 
   // Build default attribute values from layer schema
-  function buildDefaultProperties(layer) {
-    if (!layer?.fields) return {};
-    const props = {};
-    layer.fields.forEach(f => {
-      if (f.name === 'ID') return; // handled by feature id
-      if (f.defaultVal === 'NOW') props[f.name] = new Date().toISOString();
-      else if (f.defaultVal && f.defaultVal !== 'AUTO_INC') props[f.name] = f.defaultVal;
-      else props[f.name] = '';
-    });
-    return props;
-  }
-
-  const updateFeatureProperties = (featureId, newProps) => {
-    setCollectedPoints(prev => prev.map(f =>
-      f.properties.id === featureId ? { ...f, properties: { ...f.properties, ...newProps } } : f
-    ));
-    if (popupFeature && popupFeature.feature.properties.id === featureId) {
-      setPopupFeature(prev => ({
-        ...prev,
-        feature: { ...prev.feature, properties: { ...prev.feature.properties, ...newProps } }
-      }));
-    }
-  };
 
   const closePopup = ({ discardDraft = false } = {}) => {
     if ((discardDraft || isAddingRow) && popupFeature?.feature?.properties?.__draftRow) {
@@ -546,7 +337,7 @@ export default function App() {
     setIsEditingPopup(false);
     setIsAddingRow(false);
     setShowAddFieldForm(false);
-    setNewPopupField({ name: '', type: 'String' });
+    setNewPopupField(EMPTY_NEW_FIELD);
   };
 
   const savePopup = () => {
@@ -566,7 +357,7 @@ export default function App() {
     setIsEditingPopup(false);
     setIsAddingRow(false);
     setShowAddFieldForm(false);
-    setNewPopupField({ name: '', type: 'String' });
+    setNewPopupField(EMPTY_NEW_FIELD);
   };
 
   const deleteFeature = (featureId) => {
@@ -576,13 +367,6 @@ export default function App() {
     }
   };
 
-  const getDefaultValueForType = (type) => {
-    if (type === 'Integer') return 0;
-    if (type === 'Double') return 0;
-    if (type === 'Boolean') return false;
-    if (type === 'Date') return new Date().toISOString().split('T')[0];
-    return '';
-  };
 
   const addFieldToFeature = (featureId) => {
     const fieldName = newPopupField.name.trim();
@@ -613,50 +397,15 @@ export default function App() {
         ]
       }
     } : prev);
-    setNewPopupField({ name: '', type: 'String' });
+    setNewPopupField(EMPTY_NEW_FIELD);
     setShowAddFieldForm(false);
     setIsEditingPopup(true);
   };
 
-  const getFieldType = (feature, layer, key) => {
-    const field = layer?.fields?.find(f => f.name === key);
-    if (field?.type) return field.type;
-    const val = feature?.properties?.[key];
-    if (typeof val === 'number') return Number.isInteger(val) ? 'Integer' : 'Double';
-    if (typeof val === 'boolean') return 'Boolean';
-    return 'String';
-  };
 
-  const coerceFieldValue = (type, rawValue) => {
-    if (type === 'Integer') {
-      const n = parseInt(rawValue, 10);
-      return Number.isFinite(n) ? n : 0;
-    }
-    if (type === 'Double') {
-      const n = Number(rawValue);
-      return Number.isFinite(n) ? n : 0;
-    }
-    if (type === 'Boolean') return Boolean(rawValue);
-    return rawValue;
-  };
 
   const createTableRow = (layer) => {
-    const featureId = Date.now();
-    const props = {
-      id: featureId,
-      ID: featureId,
-      layerId: layer.id,
-      layerName: layer.name,
-      sourceCrs: getCrsCode(layer.crs || 'EPSG:4326'),
-      timestamp: new Date().toISOString(),
-      __draftRow: true,
-      ...buildDefaultProperties(layer)
-    };
-    const newFeature = {
-      type: 'Feature',
-      geometry: null,
-      properties: props
-    };
+    const newFeature = createDraftTableFeature(layer);
     setCollectedPoints(prev => [...prev, newFeature]);
     setPopupFeature({ feature: newFeature, layer });
     setIsEditingPopup(true);
@@ -725,119 +474,14 @@ export default function App() {
   };
 
   // ── Export ────────────────────────────────────────────────────────────────
-  const exportData = async (options = {}) => {
-    const layerIdFilter = typeof options === 'object' ? options.layerId : options;
-    const features = layerIdFilter
-      ? collectedPoints.filter(f => String(f.properties.layerId) === String(layerIdFilter))
-      : collectedPoints;
-    if (features.length === 0) {
-      alert('Nessuna feature da esportare.');
-      return;
-    }
-
-    const layer = layerIdFilter ? layers.find(l => String(l.id) === String(layerIdFilter)) : null;
-    let exportCrs = getCrsCode(options.crs || projectCrs);
-    if (options.crsMode === 'wgs84') exportCrs = 'EPSG:4326';
-    if (options.crsMode === 'layer' && layer) exportCrs = getCrsCode(layer.crs || layer.sourceCrs || 'EPSG:4326');
-    if (options.crsMode === 'project') exportCrs = projectCrs;
-
-    const extension = String(options.extension || 'geojson').replace(/^\./, '').toLowerCase();
-    const layerName = layerIdFilter ? (layer?.name || 'layer') : 'all_layers';
-    const defaultBase = `${layerName}_${exportCrs.replace(':','')}_${new Date().toISOString().split('T')[0]}`;
-    const filenameBase = (options.filename || defaultBase).replace(/\.[^.]+$/, '');
-
-    const exportFeatures = features.map(f => {
-      const srcLayer = layers.find(l => l.id === f.properties.layerId);
-      const sourceCrs = getFeatureSourceCrs(f, srcLayer);
-      return sourceCrs === exportCrs ? f : transformFeature(f, sourceCrs, exportCrs);
-    });
-
-    let content = '';
-    let mime = 'text/plain';
-    let filename = `${filenameBase}.${extension}`;
-
-    if (extension === 'csv') {
-      const keys = [...new Set(exportFeatures.flatMap(f => Object.keys(f.properties || {})))];
-      const header = [...keys, 'geometry_type', 'coordinates', 'crs'];
-      const rows = exportFeatures.map(f => [
-        ...keys.map(k => JSON.stringify(f.properties?.[k] ?? '')),
-        JSON.stringify(f.geometry?.type || ''),
-        JSON.stringify(JSON.stringify(f.geometry?.coordinates ?? null)),
-        JSON.stringify(exportCrs)
-      ].join(','));
-      content = [header.join(','), ...rows].join('\n');
-      mime = 'text/csv';
-    } else {
-      const geojson = {
-        type: 'FeatureCollection',
-        name: layerName,
-        crs: { type: 'name', properties: { name: exportCrs } },
-        features: exportFeatures
-      };
-      content = JSON.stringify(geojson, null, 2);
-      mime = 'application/geo+json';
-      filename = `${filenameBase}.${extension === 'json' ? 'json' : 'geojson'}`;
-    }
-
-    try {
-      if (options.directoryHandle) {
-        await writeTextToDirectory(options.directoryHandle, filename, content, mime);
-        if (extension !== 'csv') {
-          await writeTextToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      } else if (options.fileHandle) {
-        await writeTextToFileHandle(options.fileHandle, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      } else if (options.useSaveFilePicker && canChooseOutputFile()) {
-        const accept = extension === 'csv'
-          ? { 'text/csv': ['.csv'] }
-          : extension === 'json'
-            ? { 'application/json': ['.json'], 'text/plain': ['.json'] }
-            : { 'application/geo+json': ['.geojson'], 'application/json': ['.geojson'], 'text/plain': ['.geojson'] };
-        const handle = await chooseWritableFile({
-          suggestedName: filename,
-          description: 'GIS export',
-          accept,
-        });
-        await writeTextToFileHandle(handle, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      } else {
-        downloadTextFile(filename, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      }
-    } catch (err) {
-      if (err?.name !== 'AbortError') {
-        console.error(err);
-        alert('Export non riuscito. Uso download standard.');
-        downloadTextFile(filename, content, mime);
-        if (extension !== 'csv') {
-          downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-        }
-      }
-    }
-  };
+  const exportData = async (options = {}) => exportFeatures(options, {
+    collectedPoints,
+    layers,
+    projectCrs,
+    getFeatureSourceCrs,
+  });
 
   // ── Settings ──────────────────────────────────────────────────────────────
-  const saveSettings = async () => {
-    // If compassMode just turned on, request permission on iOS
-    if (draftSettings.compassMode && !settings.compassMode) {
-      const granted = await requestCompassPermission();
-      if (!granted) {
-        alert(language === 'en' ? 'Device orientation permission denied. Compass mode disabled.' : 'Permesso orientamento dispositivo negato. Modalità bussola disabilitata.');
-        setDraftSettings(s => ({ ...s, compassMode: false }));
-        return;
-      }
-    }
-    setSettings(draftSettings);
-    setActiveTab('explore');
-  };
-
   const gpsIcon = createGpsIcon(deviceHeading || 0);
 
   return (
@@ -1099,7 +743,7 @@ export default function App() {
                       {FIELD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => { setShowAddFieldForm(false); setNewPopupField({ name: '', type: 'String' }); }} className="px-3 py-2 rounded-lg bg-white/5 text-[9px] font-bold uppercase tracking-widest text-white/50">{t(language, 'cancel')}</button>
+                      <button onClick={() => { setShowAddFieldForm(false); setNewPopupField(EMPTY_NEW_FIELD); }} className="px-3 py-2 rounded-lg bg-white/5 text-[9px] font-bold uppercase tracking-widest text-white/50">{t(language, 'cancel')}</button>
                       <button onClick={() => addFieldToFeature(popupFeature.feature.properties.id)} className="px-3 py-2 rounded-lg bg-primary/20 text-[9px] font-bold uppercase tracking-widest text-primary">{t(language, 'add')}</button>
                     </div>
                   </div>
