@@ -463,7 +463,7 @@ export default function App() {
     if (drawingMode && !isFreehandMode) {
       handleAddNode(latlng);
     }
-  }, [measureMode, pointTapMode, drawingMode, isFreehandMode, handleAddNode]);
+  }, [measureMode, pointTapMode, drawingMode, isFreehandMode, handleAddNode, collectPointAtLatLng]);
 
 
   const undoDraftVertex = useCallback(() => {

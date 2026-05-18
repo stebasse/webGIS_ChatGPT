@@ -65,6 +65,7 @@ export default function ExploreHUD({
     ? FALLBACK_CRS
     : [{ code: projectCrs || 'EPSG:4326', name: 'Selected CRS' }, ...FALLBACK_CRS];
   const basemapIsDark = activeBasemap === 'carto_dark' || activeBasemap === 'satellite';
+  const activeLayerIsPoint = !!activeLayer?.type?.includes('Point');
 
   const formatDistance = (m) => {
     if (!m || m <= 0) return '—';
@@ -426,14 +427,37 @@ export default function ExploreHUD({
         </div>
       )}
 
+      {/* ── Point tap placement big control ───────────────────────────── */}
+      {activeLayerIsPoint && !drawingMode && !measureMode && (
+        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto z-[90] w-[min(92vw,420px)]">
+          <button
+            type="button"
+            onClick={() => setPointTapMode?.(!pointTapMode)}
+            className={`w-full glass rounded-[2rem] border px-5 py-4 shadow-2xl transition-all flex items-center justify-center gap-3 ${pointTapMode ? 'bg-emerald-400/25 border-emerald-300 text-white shadow-[0_0_24px_rgba(52,211,153,0.35)]' : 'bg-slate-950/80 border-white/20 text-white hover:border-emerald-300'}`}
+            title={pointTapMode ? 'Disattiva inserimento punti da mappa' : 'Attiva inserimento punti da mappa'}
+            aria-pressed={pointTapMode}
+          >
+            <span className={`w-10 h-10 rounded-full flex items-center justify-center border ${pointTapMode ? 'bg-emerald-300 text-slate-950 border-emerald-200' : 'bg-white/10 text-emerald-300 border-white/20'}`}>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block text-[11px] sm:text-xs font-black uppercase tracking-[0.22em]">{pointTapMode ? 'Inserimento punti attivo' : 'Aggiungi punti dalla mappa'}</span>
+              <span className="block text-[8px] sm:text-[9px] text-white/55 uppercase tracking-widest mt-0.5">{pointTapMode ? 'tocca la mappa; pan con due dita senza creare punti' : 'tocca per attivare il tap sui punti dello schermo'}</span>
+            </span>
+            {pointTapMode && (
+              <span className="w-8 h-8 rounded-full bg-red-500/20 text-red-200 flex items-center justify-center text-xl leading-none">×</span>
+            )}
+          </button>
+        </div>
+      )}
+
       {/* ── Point tap mode banner ───────────────────────────────────── */}
-      {pointTapMode && !drawingMode && !measureMode && (
+      {pointTapMode && !activeLayerIsPoint && !drawingMode && !measureMode && (
         <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-auto">
-          <div className="glass px-4 py-2.5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 shadow-xl flex items-center gap-3">
+          <div className="glass px-4 py-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-xl flex items-center gap-3">
             <div>
-              <div className="text-[8px] font-bold text-emerald-300 uppercase tracking-widest">Tap point</div>
-              <div className="text-xs font-mono text-white">tocca la mappa per aggiungere punti</div>
-              <div className="text-[7px] text-white/35 uppercase tracking-widest">pan con due dita senza creare punti</div>
+              <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">Tap point</div>
+              <div className="text-xs font-mono text-white">seleziona un layer puntuale</div>
             </div>
             <button onClick={() => setPointTapMode?.(false)} className="w-7 h-7 rounded-full bg-white/5 hover:bg-red-400/20 text-white/50 hover:text-red-300 transition-all" title="Disattiva aggiunta punti">
               ×
