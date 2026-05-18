@@ -88,6 +88,20 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     setShowOutputTargetDialog(false);
   };
 
+  const getVisibleOutputPath = () => {
+    const target = getOutputTargetInfo();
+    if (dirHandle) {
+      return `${dirLabel || dirHandle.name || 'Cartella selezionata'}/${target.filename}`;
+    }
+    if (fileHandle) {
+      return fileHandle.name || target.filename;
+    }
+    if (dirLabel === 'Download browser') {
+      return `Download browser/${target.filename}`;
+    }
+    return `Non selezionato (default: Download browser/${target.filename})`;
+  };
+
   const validate = () => {
     const errs = {};
     const name = newLayer.name.trim();
@@ -119,6 +133,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       dirHandle: dirHandle || null,
       fileHandle: fileHandle || null,
       dirLabel: dirLabel || null,
+      outputPathLabel: getVisibleOutputPath(),
       symbology: { mode: 'single', attribute: null, rules: [] }
     };
     const createInitialOutputFile = async () => {
@@ -244,9 +259,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
                   Choose Folder
                 </button>
-                {dirLabel && (
-                  <span className="text-xs text-emerald-400 font-mono truncate max-w-[200px]">📁 {dirLabel}</span>
-                )}
+                <span className="text-xs text-emerald-400 font-mono break-all flex-1 min-w-0">📁 {getVisibleOutputPath()}</span>
               </div>
             </div>
           </section>
@@ -374,6 +387,11 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             <button type="button" onClick={useDownloadTarget} className="w-full px-4 py-3 rounded-xl bg-primary text-white text-left text-[10px] font-bold uppercase tracking-widest">
               Usa download browser
             </button>
+
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+              <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Full path file</div>
+              <div className="text-[10px] text-emerald-300 font-mono break-all mt-1">{getVisibleOutputPath()}</div>
+            </div>
 
             <p className="text-[8px] text-slate-500 leading-snug">{fileSystemUnavailableMessage}</p>
           </div>

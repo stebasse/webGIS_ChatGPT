@@ -101,6 +101,17 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
     setShowExportTargetDialog(false);
   };
 
+  const getVisibleExportPath = () => {
+    const target = getExportTargetInfo();
+    if (exportDirectoryHandle) {
+      return `${exportDirectoryLabel || exportDirectoryHandle.name || 'Cartella selezionata'}/${target.suggestedName}`;
+    }
+    if (exportFileHandle) {
+      return exportFileHandle.name || target.suggestedName;
+    }
+    return `${exportDirectoryLabel || 'Download browser'}/${target.suggestedName}`;
+  };
+
   const runExport = async () => {
     const layerId = filterLayerId === 'all' ? null : filterLayerId;
     const crs = exportOptions.crsMode === 'custom' ? exportOptions.customCrs : undefined;
@@ -208,8 +219,8 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
             <div className="rounded-2xl border border-white/10 bg-black/20 p-3 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Percorso</div>
-                  <div className="text-[10px] text-white/70 truncate">{exportDirectoryLabel}</div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Full path file</div>
+                  <div className="text-[10px] text-white/70 break-all">{getVisibleExportPath()}</div>
                 </div>
                 <button onClick={chooseExportFolder} className="px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary hover:text-primary">Scegli</button>
               </div>
@@ -224,6 +235,10 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
                 {canChooseDirectory() && <button type="button" onClick={chooseExportDirectoryTarget} className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary">Scegli cartella</button>}
                 {canChooseOutputFile() && <button type="button" onClick={chooseExportFileTarget} className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-left text-[9px] font-bold uppercase tracking-widest text-white hover:border-primary">Scegli file di output</button>}
                 <button type="button" onClick={useExportDownloadTarget} className="w-full px-3 py-2 rounded-xl bg-primary text-left text-[9px] font-bold uppercase tracking-widest text-white">Usa download browser</button>
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="text-[8px] font-bold uppercase tracking-widest text-slate-500">Full path file</div>
+                  <div className="text-[10px] text-emerald-300 font-mono break-all mt-1">{getVisibleExportPath()}</div>
+                </div>
                 <p className="text-[8px] text-slate-500 leading-snug">{fileSystemUnavailableMessage}</p>
               </div>
             )}
