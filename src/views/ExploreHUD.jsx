@@ -15,6 +15,7 @@ export default function ExploreHUD({
   layers, selectedLayerId, units,
   map,
   isFreehandMode, setIsFreehandMode,
+  pointTapMode, setPointTapMode,
   measureMode,
   measureCoordinates,
   measureResult,
@@ -249,6 +250,18 @@ export default function ExploreHUD({
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
 
+        {/* Point tap placement */}
+        <button
+          onClick={() => setPointTapMode?.(!pointTapMode)}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${pointTapMode ? 'bg-emerald-400/20 border-emerald-400 text-emerald-300' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
+          title="Aggiungi punti cliccando sulla mappa"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
+          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Tap point</span>
+        </button>
+
+        <div className="w-px h-3 bg-white/10 flex-shrink-0" />
+
         {/* Go To coordinates */}
         <button
           onClick={() => { setShowGoTo(v => !v); setGoToValues(prev => ({ ...prev, crs: projectCrs || prev.crs || 'EPSG:4326' })); }}
@@ -410,6 +423,22 @@ export default function ExploreHUD({
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             Finish {drawingMode}
           </button>
+        </div>
+      )}
+
+      {/* ── Point tap mode banner ───────────────────────────────────── */}
+      {pointTapMode && !drawingMode && !measureMode && (
+        <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-auto">
+          <div className="glass px-4 py-2.5 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 shadow-xl flex items-center gap-3">
+            <div>
+              <div className="text-[8px] font-bold text-emerald-300 uppercase tracking-widest">Tap point</div>
+              <div className="text-xs font-mono text-white">tocca la mappa per aggiungere punti</div>
+              <div className="text-[7px] text-white/35 uppercase tracking-widest">pan con due dita senza creare punti</div>
+            </div>
+            <button onClick={() => setPointTapMode?.(false)} className="w-7 h-7 rounded-full bg-white/5 hover:bg-red-400/20 text-white/50 hover:text-red-300 transition-all" title="Disattiva aggiunta punti">
+              ×
+            </button>
+          </div>
         </div>
       )}
 

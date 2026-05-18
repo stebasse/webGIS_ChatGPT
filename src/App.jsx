@@ -87,6 +87,7 @@ export default function App() {
   const [popupFeature, setPopupFeature] = useState(null);
   const [isEditingPopup, setIsEditingPopup] = useState(false);
   const [isFreehandMode, setIsFreehandMode] = useState(false);
+  const [pointTapMode, setPointTapMode] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [showAddFieldForm, setShowAddFieldForm] = useState(false);
   const [newPopupField, setNewPopupField] = useState({ name: '', type: 'String' });
@@ -162,6 +163,7 @@ export default function App() {
 
   useEffect(() => {
     if (activeTab !== 'explore') setIsTocSidebarOpen(false);
+    if (activeTab !== 'explore') setPointTapMode(false);
   }, [activeTab]);
 
   const openTocSidebar = () => {
@@ -388,6 +390,49 @@ export default function App() {
     map?.setView([lngLat[1], lngLat[0]], Math.max(map.getZoom(), 16));
   };
 
+  const createPointFeatureAtPosition = useCallback((position, accuracy = null) => {
+    if (layers.length === 0) {
+      alert('Nessun layer presente. Crea prima un layer dalla sezione Layers.');
+      return false;
+    }
+    const activeLayer = layers.find(l => l.id === selectedLayerId);
+    if (!activeLayer) {
+      alert('Nessun layer selezionato. Apri la TOC e seleziona un layer.');
+      setActiveTab('explore');
+      setIsTocSidebarOpen(true);
+      return false;
+    }
+    const geomType = activeLayer.type;
+    if (!geomType?.includes('Point')) {
+      alert('Seleziona un layer puntuale per aggiungere punti sulla mappa.');
+      return false;
+    }
+    const layerCrs = getCrsCode(activeLayer.crs || 'EPSG:4326');
+    const storedPosition = coordinatesToLayerCrs(position, activeLayer);
+    const newPoint = {
+      type: 'Feature',
+      properties: {
+        id: Date.now(),
+        layerId: selectedLayerId,
+        layerName: activeLayer.name,
+        sourceCrs: layerCrs,
+        timestamp: new Date().toISOString(),
+        accuracy,
+        ...buildDefaultProperties(activeLayer)
+      },
+      geometry: { type: 'Point', coordinates: storedPosition }
+    };
+    setCollectedPoints(prev => [...prev, newPoint]);
+    return true;
+  }, [layers, selectedLayerId, coordinatesToLayerCrs]);
+
+  const collectPointAtLatLng = useCallback((latlng) => {
+    const lng = Array.isArray(latlng) ? latlng[0] : latlng?.lng;
+    const lat = Array.isArray(latlng) ? latlng[1] : latlng?.lat;
+    if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+    return createPointFeatureAtPosition([lng, lat], null);
+  }, [createPointFeatureAtPosition]);
+
   // ── Map interaction ───────────────────────────────────────────────────────
   const handleAddNode = useCallback((latlng) => {
     if (!latlng) return;
@@ -411,10 +456,14 @@ export default function App() {
       }
       return;
     }
+    if (pointTapMode) {
+      collectPointAtLatLng(latlng);
+      return;
+    }
     if (drawingMode && !isFreehandMode) {
       handleAddNode(latlng);
     }
-  }, [measureMode, drawingMode, isFreehandMode, handleAddNode]);
+  }, [measureMode, pointTapMode, drawingMode, isFreehandMode, handleAddNode]);
 
 
   const undoDraftVertex = useCallback(() => {
@@ -663,25 +712,7 @@ export default function App() {
         }
       }
 
-      const layerCrs = getCrsCode(activeLayer.crs || 'EPSG:4326');
-      const storedPosition = coordinatesToLayerCrs(position, activeLayer);
-      const newPoint = {
-        type: 'Feature',
-        properties: {
-          id: Date.now(),
-          layerId: selectedLayerId,
-          layerName: activeLayer.name,
-          sourceCrs: layerCrs,
-          timestamp: new Date().toISOString(),
-          accuracy: accuracy,
-          ...buildDefaultProperties(activeLayer)
-        },
-        geometry: { type: 'Point', coordinates: storedPosition }
-      };
-      setCollectedPoints(prev => [...prev, newPoint]);
-      // Brief visual feedback without blocking alert
-      const total = collectedPoints.length + 1;
-      if (window.__GIS_DEBUG__) console.debug(`Point collected. Total: ${total}`);
+      createPointFeatureAtPosition(position, accuracy);
     } else {
       // Line or Polygon — start drawing mode
       const mode = geomType.includes('Line') ? 'Line' : 'Polygon';
@@ -836,7 +867,7 @@ export default function App() {
             onAddNode={handleAddNode}
             scaleLocked={scaleLocked}
           />
-          <MapEvents onMapClick={handleMapClick} />
+          <MapEvents onMapClick={handleMapClick} suppressMultiTouchClick={pointTapMode} />
 
           {gpsState.position && (
             <Marker position={[gpsState.position[1], gpsState.position[0]]} icon={gpsIcon} />
@@ -942,6 +973,8 @@ export default function App() {
             map={map}
             isFreehandMode={isFreehandMode}
             setIsFreehandMode={setIsFreehandMode}
+            pointTapMode={pointTapMode}
+            setPointTapMode={setPointTapMode}
             measureMode={measureMode}
             measureCoordinates={measureCoordinates}
             measureResult={formatMeasureValue(measureMode, measureCoordinates)}
