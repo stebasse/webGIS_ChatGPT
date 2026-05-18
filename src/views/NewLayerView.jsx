@@ -10,7 +10,7 @@ const DEFAULT_FIELDS = [
 const FORMATS = [
   { id: 'geojson', label: 'GeoJSON', ext: '.geojson', supported: true },
   { id: 'kml', label: 'KML', ext: '.kml', supported: true },
-  { id: 'csv', label: 'CSV', ext: '.csv', supported: true, note: 'Solo punti' },
+  { id: 'csv', label: 'CSV', ext: '.csv', supported: true, noteKey: 'pointOnly' },
   { id: 'gpkg', label: 'GeoPackage', ext: '.gpkg', supported: false },
   { id: 'shp', label: 'Shapefile', ext: '.shp', supported: false },
 ];
@@ -61,7 +61,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       setDirLabel(handle.name || tt('selectedFolder'));
       setShowOutputTargetDialog(false);
     } catch (e) {
-      if (e?.name !== 'AbortError') alert('Impossibile selezionare la cartella: ' + (e?.message || e));
+      if (e?.name !== 'AbortError') alert(tt('selectFolderFailed') + ' ' + (e?.message || e));
     }
   };
 
@@ -79,7 +79,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       setDirLabel(handle.name || target.filename);
       setShowOutputTargetDialog(false);
     } catch (e) {
-      if (e?.name !== 'AbortError') alert('Impossibile selezionare il file: ' + (e?.message || e));
+      if (e?.name !== 'AbortError') alert(tt('selectFileFailed') + ' ' + (e?.message || e));
     }
   };
 
@@ -107,11 +107,11 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   const validate = () => {
     const errs = {};
     const name = newLayer.name.trim();
-    if (!name) errs.name = 'Il nome del layer è obbligatorio.';
+    if (!name) errs.name = tt('nameRequired');
     else if (layers.some(l => l.name.toLowerCase() === name.toLowerCase()))
-      errs.name = `Esiste già un layer chiamato "${name}". Scegli un nome diverso.`;
+      errs.name = language === 'en' ? `${tt('duplicateLayerNamePrefix')} "${name}" ${tt('duplicateLayerNameSuffix')}` : `${tt('duplicateLayerNamePrefix')} "${name}". ${tt('duplicateLayerNameSuffix')}`;
     const validFields = fields.filter(f => f.name.trim());
-    if (validFields.length === 0) errs.fields = 'Aggiungi almeno un campo con un nome.';
+    if (validFields.length === 0) errs.fields = tt('addAtLeastOneField');
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -154,7 +154,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
     createInitialOutputFile().catch(err => {
       console.error(err);
-      alert('Layer creato nel progetto, ma non riesco a scrivere il file nel percorso scelto.');
+      alert(tt('layerCreatedFileWriteFailed'));
     });
 
     setLayers(prev => [...prev, layer]);
@@ -170,10 +170,10 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   };
 
   const geomTipos = [
-    { id: 'Punto', name: 'Punto', icon: null },
-    { id: 'Linea', name: 'Linea', icon: 'M4 12h16' },
-    { id: 'Poligono', name: 'Poligono', icon: 'M4 4h16v16H4z' },
-    { id: 'Table', name: 'Tabella (senza geometria)', icon: 'M4 6h16M4 12h16M4 18h16' }
+    { id: 'Punto', nameKey: 'point', icon: null },
+    { id: 'Linea', nameKey: 'line', icon: 'M4 12h16' },
+    { id: 'Poligono', nameKey: 'polygon', icon: 'M4 4h16v16H4z' },
+    { id: 'Table', nameKey: 'table', icon: 'M4 6h16M4 12h16M4 18h16' }
   ];
 
   return (
@@ -187,7 +187,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
           {/* Tipo geometria */}
           <section>
-            <p className="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest">{language === 'en' ? 'Geometry type' : 'Tipo geometria'}</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase mb-4 tracking-widest">{tt('geometryType')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {geomTipos.map(type => (
                 <button
@@ -210,7 +210,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
           {/* Nome layer */}
           <section className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{language === 'en' ? 'Layer name' : 'Nome layer'}</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('layerName')}</label>
             <input
               type="text"
               placeholder="es. Rilievo_Vegetazione_2024"
@@ -227,24 +227,24 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
             {/* Format selection */}
             <div className="space-y-2">
-              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">{language === 'en' ? 'Format' : 'Formato'}</label>
+              <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">{tt('format')}</label>
               <div className="flex flex-wrap gap-2">
                 {FORMATS.map(f => (
                   <button
                     key={f.id}
                     onClick={() => setFormat(f.id)}
                     className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider border transition-all flex items-center gap-1.5 ${format === f.id ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:border-white/30 hover:text-white'} ${!f.supported ? 'opacity-40' : ''}`}
-                    title={!f.supported ? 'Non supportato in modalità browser-only' : f.note || ''}
+                    title={!f.supported ? tt('browserOnlyUnsupported') : (f.noteKey ? tt(f.noteKey) : '')}
                   >
                     {f.label}
-                    {f.note && <span className="text-[8px] opacity-60">({f.note})</span>}
+                    {f.noteKey && <span className="text-[8px] opacity-60">({tt(f.noteKey)})</span>}
                     {!f.supported && <span className="text-[8px] text-red-400 ml-1">⊘</span>}
                   </button>
                 ))}
               </div>
               {!FORMATS.find(f => f.id === format)?.supported && (
                 <p className="text-[10px] text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-xl px-3 py-2">
-                  ⚠ {format.toUpperCase()} non è esportabile direttamente dal browser. L'esportazione sarà disponibile solo tramite strumenti desktop (QGIS, ecc.).
+                  ⚠ {format.toUpperCase()} {tt('formatNotExportableBrowser')}
                 </p>
               )}
             </div>
@@ -269,13 +269,13 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
           {/* Schema attributi */}
           <section className="space-y-4">
             <div className="flex justify-between items-center">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{language === 'en' ? 'Attribute schema' : 'Schema attributi'}</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('attributeSchema')}</label>
               <button
                 onClick={addField}
                 className="flex items-center gap-2 px-4 py-2 text-[10px] font-bold text-primary border border-primary/30 rounded-xl hover:bg-primary/10 transition-all uppercase tracking-widest"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
-                {language === 'en' ? 'Add field' : 'Aggiungi campo'}
+                {tt('addField')}
               </button>
             </div>
             {errors.fields && <p className="text-[10px] text-red-400">{errors.fields}</p>}
@@ -369,7 +369,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">{tt('outputFolder')}</h3>
-                <p className="text-[9px] text-slate-500 mt-1 leading-snug">{language === 'en' ? 'Choose where to save the new layer.' : 'Scegli dove salvare il nuovo layer.'}</p>
+                <p className="text-[9px] text-slate-500 mt-1 leading-snug">{tt('chooseNewLayerDestination')}</p>
               </div>
               <button type="button" onClick={() => setShowOutputTargetDialog(false)} className="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400">×</button>
             </div>
@@ -395,7 +395,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
               <div className="text-[10px] text-emerald-300 font-mono break-all mt-1">{getVisibleOutputPath()}</div>
             </div>
 
-            <p className="text-[8px] text-slate-500 leading-snug">{fileSystemUnavailableMessage}</p>
+            <p className="text-[8px] text-slate-500 leading-snug">{tt('folderChoiceHelp')}</p>
           </div>
         </div>
       )}

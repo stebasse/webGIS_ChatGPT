@@ -168,7 +168,7 @@ export default function ExploreHUD({
               });
             }}
             className={`glass bg-slate-950/85 backdrop-blur-xl w-9 h-9 rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
-            title={statusMenusLocked ? (language === 'en' ? 'Unlock CRS and layer menus' : 'Sblocca menu CRS e layer') : (language === 'en' ? 'Lock CRS and layer menus' : 'Blocca menu CRS e layer')}
+            title={statusMenusLocked ? tt('unlockCrsLayerMenus') : tt('lockCrsLayerMenus')}
             aria-pressed={statusMenusLocked}
           >
             {statusMenusLocked ? (
@@ -235,8 +235,8 @@ export default function ExploreHUD({
           type="button"
           onClick={() => setShowGrid(!showGrid)}
           className={`flex items-center justify-center w-8 h-8 rounded-xl border transition-all flex-shrink-0 ${showGrid ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title={showGrid ? 'Nascondi griglia' : 'Mostra griglia'}
-          aria-label={showGrid ? 'Nascondi griglia' : 'Mostra griglia'}
+          title={showGrid ? tt('hideGrid') : tt('showGrid')}
+          aria-label={showGrid ? tt('hideGrid') : tt('showGrid')}
           aria-pressed={showGrid}
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,10 +250,10 @@ export default function ExploreHUD({
         <button
           onClick={toggleMeasureMode}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${measureMode ? 'bg-amber-400/20 border-amber-400 text-amber-300' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title="Misura distanza / area"
+          title={tt('measureDistanceArea')}
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 17l6-6 4 4 8-8M5 19h14" /></svg>
-          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{measureMode || 'Misura'}</span>
+          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{measureMode ? (measureMode === 'Area' ? tt('area') : tt('measure')) : tt('measure')}</span>
         </button>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
@@ -262,10 +262,10 @@ export default function ExploreHUD({
         <button
           onClick={() => { setShowGoTo(v => !v); setGoToValues(prev => ({ ...prev, crs: projectCrs || prev.crs || 'EPSG:4326' })); }}
           className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all flex-shrink-0 ${showGoTo ? 'bg-primary/20 border-primary text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-          title="Vai a coordinate"
+          title={tt('goToCoordinates')}
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2l7 19-7-4-7 4 7-19z" /></svg>
-          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">Vai a</span>
+          <span className="text-[8px] sm:text-[10px] font-bold uppercase tracking-widest hidden xs:inline">{tt('goTo')}</span>
         </button>
 
         <div className="w-px h-3 bg-white/10 flex-shrink-0" />
@@ -297,7 +297,7 @@ export default function ExploreHUD({
               }
             }}
             className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl border flex items-center justify-center transition-all shrink-0 ${scaleLocked ? 'bg-primary/25 border-primary text-primary shadow-[0_0_14px_rgba(0,191,255,0.25)]' : showScaleInput ? 'bg-primary/15 border-primary/70 text-primary' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:border-white/30'}`}
-            title={scaleLocked ? 'Scala bloccata. Tocca per sbloccare.' : 'Imposta e blocca scala, es. 1:10000'}
+            title={scaleLocked ? tt('scaleLockedUnlock') : tt('setLockScaleHint')}
             aria-label={scaleLocked ? 'Sblocca scala mappa' : 'Imposta scala mappa'}
           >
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -348,8 +348,8 @@ export default function ExploreHUD({
         <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
           <div className="flex justify-between items-center">
             <div>
-              <p className="text-[9px] font-bold text-white uppercase tracking-widest">Vai a coordinate</p>
-              <p className="text-[8px] text-slate-500">Inserisci coordinate nel CRS selezionato</p>
+              <p className="text-[9px] font-bold text-white uppercase tracking-widest">{tt('goToCoordinates')}</p>
+              <p className="text-[8px] text-slate-500">{tt('enterCoordinatesInSelectedCrs')}</p>
             </div>
             <button onClick={() => setShowGoTo(false)} className="text-slate-500 hover:text-white">×</button>
           </div>
@@ -358,13 +358,13 @@ export default function ExploreHUD({
             <input value={goToValues.y} onChange={e => setGoToValues(v => ({ ...v, y: e.target.value }))} placeholder="N / Lat" className="bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
           </div>
           <input value={goToValues.crs} onChange={e => setGoToValues(v => ({ ...v, crs: e.target.value }))} placeholder="EPSG:32632" className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-[10px] text-white outline-none focus:border-primary" />
-          <button onClick={() => onGoToCoordinate?.({ x: goToValues.x, y: goToValues.y, crs: goToValues.crs })} className="w-full px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">{language === 'en' ? 'Center map' : 'Centra mappa'}</button>
+          <button onClick={() => onGoToCoordinate?.({ x: goToValues.x, y: goToValues.y, crs: goToValues.crs })} className="w-full px-4 py-2 rounded-xl bg-primary/20 border border-primary/30 text-primary text-[9px] font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">{tt('centerMap')}</button>
         </div>
       )}
 
       {showScaleInput && !scaleLocked && (
         <div className="absolute top-[calc(5.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
-          <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">Blocca scala</div>
+          <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">{tt('lockScale')}</div>
           <div className="flex items-center gap-2">
             <input
               value={scaleInputValue}
@@ -380,7 +380,7 @@ export default function ExploreHUD({
               Lock
             </button>
           </div>
-          <p className="mt-2 text-[8px] text-white/40 leading-snug">La distanza della scala resta visibile; zoom e pinch sono bloccati fino allo sblocco.</p>
+          <p className="mt-2 text-[8px] text-white/40 leading-snug">{tt('scaleLockHelp')}</p>
         </div>
       )}
 
@@ -399,10 +399,10 @@ export default function ExploreHUD({
             onClick={undoDraftVertex}
             disabled={draftCoordinatesCount <= 0}
             className="glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] bg-white/5 border border-white/10 text-slate-300 font-bold uppercase tracking-widest text-[9px] hover:border-primary hover:text-primary disabled:opacity-40 disabled:pointer-events-none transition-all flex-shrink-0"
-            title="Annulla ultimo vertice"
+            title={tt('undoLastVertex')}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 14L4 9m0 0l5-5M4 9h11a5 5 0 010 10h-1" /></svg>
-            Annulla
+            {tt('undo')}
           </button>
           <button
             onClick={clearDraftFeature}
@@ -433,7 +433,7 @@ export default function ExploreHUD({
             aria-pressed={pointTapMode}
           >
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2a7 7 0 017 7c0 5-7 13-7 13S5 14 5 9a7 7 0 017-7z" /><circle cx="12" cy="9" r="2.5" fill="currentColor" /></svg>
-            {pointTapMode ? `${language === 'en' ? 'Tap point' : 'Punto da tap'} ${language === 'en' ? 'active' : 'attivo'}` : (language === 'en' ? 'Tap point' : 'Punto da tap')}
+            {pointTapMode ? `${tt('tapPoint')} ${tt('active')}` : tt('tapPoint')}
           </button>
         </div>
       )}
@@ -443,8 +443,8 @@ export default function ExploreHUD({
         <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-auto">
           <div className="glass px-4 py-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-xl flex items-center gap-3">
             <div>
-              <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">{language === 'en' ? 'Tap point' : 'Punto da tap'}</div>
-              <div className="text-xs font-mono text-white">seleziona un layer puntuale</div>
+              <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">{tt('tapPoint')}</div>
+              <div className="text-xs font-mono text-white">{tt('selectPointLayer')}</div>
             </div>
             <button onClick={() => setPointTapMode?.(false)} className="w-7 h-7 rounded-full bg-white/5 hover:bg-red-400/20 text-white/50 hover:text-red-300 transition-all" title="Disattiva aggiunta punti">
               ×

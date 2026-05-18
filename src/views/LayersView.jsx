@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t as translate } from '../i18n';
 
 const normalizeLayerCrs = (v) => { const clean = String(v || 'EPSG:4326').trim().toUpperCase(); return /^\d+$/.test(clean) ? `EPSG:${clean}` : clean; };
 
@@ -13,7 +14,8 @@ const COLOR_OPTIONS = [
   { label: 'Grigio', hex: '#64748b', tw: 'bg-slate-500' },
 ];
 
-function SimbologiaPanel({ layer, onUpdate, onClose }) {
+function SimbologiaPanel({ layer, onUpdate, onClose, language = 'it' }) {
+  const tt = (key) => translate(language, key);
   const [mode, setMode] = useState(layer.symbology?.mode || 'single');
   const [selectedAttr, setSelectedAttr] = useState(layer.symbology?.attribute || '');
   const [rules, setRules] = useState(layer.symbology?.rules || []);
@@ -50,7 +52,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
       >
         <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center">
           <div>
-            <h3 className="text-sm font-bold text-white uppercase tracking-widest">Simbologia</h3>
+            <h3 className="text-sm font-bold text-white uppercase tracking-widest">{tt('symbology')}</h3>
             <p className="text-[10px] text-slate-500 mt-0.5">{layer.name}</p>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
@@ -61,11 +63,11 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
           {/* Mode toggle */}
           <div className="space-y-3">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Modalità resa</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('renderMode')}</p>
             <div className="flex bg-black/30 p-1 rounded-xl gap-1">
               {[
-                { id: 'single', label: 'Colore unico' },
-                { id: 'categorized', label: 'Per attributo' }
+                { id: 'single', label: tt('singleColor') },
+                { id: 'categorized', label: tt('byAttribute') }
               ].map(m => (
                 <button 
                   key={m.id}
@@ -81,7 +83,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
           {/* Single color mode */}
           {mode === 'single' && (
             <div className="space-y-3">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Colore layer</p>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('layerColor')}</p>
               <div className="grid grid-cols-4 gap-3">
                 {COLOR_OPTIONS.map(c => (
                   <button
@@ -101,7 +103,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
                   className="w-8 h-8 rounded-lg border-0 cursor-pointer bg-transparent"
                 />
                 <span className="text-xs font-mono text-slate-400">{singleColor.toUpperCase()}</span>
-                <span className="text-[10px] text-slate-600 ml-auto">Personalizzato</span>
+                <span className="text-[10px] text-slate-600 ml-auto">{tt('custom')}</span>
               </div>
             </div>
           )}
@@ -110,10 +112,10 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
           {mode === 'categorized' && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Attributo</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('attribute')}</p>
                 {attributes.length === 0 ? (
                   <p className="text-[10px] text-slate-600 italic p-3 rounded-xl bg-black/20 border border-white/5">
-                    Nessun attributo definito. Aggiungi prima i campi nello schema del layer.
+                    {tt('noAttributesDefined')}
                   </p>
                 ) : (
                   <select
@@ -121,7 +123,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
                     onChange={(e) => setSelectedAttr(e.target.value)}
                     className="w-full bg-slate-900 text-sm text-white border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-primary transition-colors"
                   >
-                    <option value="">— Seleziona attributo —</option>
+                    <option value="">{tt('selectAttribute')}</option>
                     {attributes.map(f => <option key={f.name} value={f.name}>{f.name} ({f.type})</option>)}
                   </select>
                 )}
@@ -130,19 +132,19 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
               {selectedAttr && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Regole colore</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('colorRules')}</p>
                     <button
                       onClick={addRule}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition-all uppercase tracking-wider"
                     >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4"/></svg>
-                      Aggiungi regola
+                      {tt('addRule')}
                     </button>
                   </div>
 
                   {rules.length === 0 && (
                     <p className="text-[10px] text-slate-600 italic p-3 rounded-xl bg-black/20 border border-white/5">
-                      Tocca "Aggiungi regola" per definire un colore per uno specifico valore attributo.
+                      {tt('addRuleHelp')}
                     </p>
                   )}
 
@@ -160,14 +162,14 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
                             type="text"
                             value={rule.value}
                             onChange={e => updateRule(idx, 'value', e.target.value)}
-                            placeholder="Attributo value..."
+                            placeholder={tt('attributeValuePlaceholder')}
                             className="bg-transparent text-xs text-white outline-none border-b border-white/10 focus:border-primary/50 py-1 transition-colors"
                           />
                           <input
                             type="text"
                             value={rule.label}
                             onChange={e => updateRule(idx, 'label', e.target.value)}
-                            placeholder="Etichetta (opzionale)"
+                            placeholder={tt('optionalLabel')}
                             className="bg-transparent text-xs text-slate-500 outline-none border-b border-white/10 focus:border-primary/50 py-1 transition-colors"
                           />
                         </div>
@@ -184,7 +186,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
                   {rules.length > 0 && (
                     <div className="p-3 rounded-xl bg-primary/5 border border-primary/20">
                       <p className="text-[9px] text-primary/60 uppercase tracking-wider font-bold">
-                        Tutti gli altri valori → colore base del layer
+                        {tt('otherValuesBaseColor')}
                       </p>
                     </div>
                   )}
@@ -195,7 +197,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
         </div>
 
         <div className="px-6 py-4 border-t border-white/10 bg-black/20 flex justify-end gap-3">
-          <button onClick={onClose} className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Annulla</button>
+          <button onClick={onClose} className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors">{tt('cancel')}</button>
           <button onClick={save} className="px-8 py-3 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20 text-xs">
             Applica
           </button>
@@ -206,8 +208,10 @@ function SimbologiaPanel({ layer, onUpdate, onClose }) {
 }
 
 export default function LayersView({ 
+  language = 'it',
   layers, layerFilter, setLayerFilter, selectedLayerId, setSelectedLayerId, toggleLayer, deleteLayer, setActiveTab, setLayers
 }) {
+  const tt = (key) => translate(language, key);
   const [symbologyLayerId, setSimbologiaLayerId] = useState(null);
   const symbologyLayer = symbologyLayerId ? layers.find(l => l.id === symbologyLayerId) : null;
 
@@ -224,6 +228,7 @@ export default function LayersView({
     <div className="w-full max-w-4xl h-full mx-auto flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       {symbologyLayer && (
         <SimbologiaPanel 
+          language={language}
           layer={symbologyLayer}
           onUpdate={(updates) => updateLayerSimbologia(symbologyLayer.id, updates)}
           onClose={() => setSimbologiaLayerId(null)}
@@ -231,13 +236,13 @@ export default function LayersView({
       )}
 
       <div className="mb-4 sm:mb-8 mt-2 sm:mt-4 w-full text-center">
-        <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">Indice layer</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('layerIndex')}</h2>
       </div>
 
       <div className="flex-1 w-full glass bg-slate-950 light-theme:bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-white/25 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
         {/* Header */}
         <div className="px-4 sm:px-8 py-3 sm:py-4 border-b border-white/10 bg-slate-950/90 light-theme:bg-white flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Gestisci layer</p>
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('manageLayers')}</p>
           <div className="relative w-full sm:w-auto">
             <input 
               type="text" 
@@ -254,7 +259,7 @@ export default function LayersView({
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-600 py-16">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
               <p className="text-sm font-bold uppercase tracking-widest">{layerFilter ? 'Nessun risultato' : 'Nessun layer presente'}</p>
-              {!layerFilter && <p className="text-[10px] text-center max-w-xs">Crea un nuovo layer o importa un file GeoJSON / KML usando i pulsanti in basso.</p>}
+              {!layerFilter && <p className="text-[10px] text-center max-w-xs">{tt('createOrImportLayerHelp')}</p>}
             </div>
           ) : (
           <div className="space-y-3">
@@ -311,7 +316,7 @@ export default function LayersView({
                 </div>
 
                 <div className="px-2 flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                  <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">CRS layer</span>
+                  <span className="text-[8px] text-slate-600 font-bold uppercase tracking-widest">{tt('layerCrs')}</span>
                   <input
                     defaultValue={layer.crs || layer.sourceCrs || 'EPSG:4326'}
                     onBlur={(e) => updateLayerCrs(layer.id, e.target.value)}

@@ -829,7 +829,7 @@ export default function App() {
     if (draftSettings.compassMode && !settings.compassMode) {
       const granted = await requestCompassPermission();
       if (!granted) {
-        alert('Permesso orientamento dispositivo negato. Modalità bussola disabilitata.');
+        alert(language === 'en' ? 'Device orientation permission denied. Compass mode disabled.' : 'Permesso orientamento dispositivo negato. Modalità bussola disabilitata.');
         setDraftSettings(s => ({ ...s, compassMode: false }));
         return;
       }
@@ -1013,6 +1013,7 @@ export default function App() {
 
         {activeTab === 'upload' && (
           <UploadView
+            language={language}
             layers={layers} setLayers={setLayers}
             setCollectedPoints={setCollectedPoints}
             setSelectedLayerId={setSelectedLayerId}
@@ -1192,7 +1193,7 @@ export default function App() {
         </div>
       )}
 
-      {showOnboarding && <OnboardingGuide onFinish={finishOnboarding} />}
+      {showOnboarding && <OnboardingGuide language={language} onFinish={finishOnboarding} />}
 
       {/* BOTTOM NAVIGATION */}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onAddFeature={collectPoint} language={language} />

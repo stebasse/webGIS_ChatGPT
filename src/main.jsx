@@ -4,6 +4,9 @@ import React from 'react'
 import './index.css'
 import App from './App.jsx'
 
+let startupLang = 'it';
+try { startupLang = JSON.parse(localStorage.getItem('stitch_gis_settings') || '{}')?.language === 'en' ? 'en' : 'it'; } catch { startupLang = 'it'; }
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props)
@@ -22,8 +25,8 @@ class ErrorBoundary extends React.Component {
     if (this.state.error) {
       return (
         <div style={{ minHeight: '100vh', background: '#0f172a', color: '#fff', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-          <h1 style={{ color: '#38bdf8', fontSize: 22, marginBottom: 12 }}>WebGIS startup error</h1>
-          <p style={{ color: '#cbd5e1', marginBottom: 12 }}>The app caught a runtime error instead of showing a black screen.</p>
+          <h1 style={{ color: '#38bdf8', fontSize: 22, marginBottom: 12 }}>{startupLang === 'en' ? 'WebGIS startup error' : 'Errore di avvio WebGIS'}</h1>
+          <p style={{ color: '#cbd5e1', marginBottom: 12 }}>{startupLang === 'en' ? 'The app caught a runtime error instead of showing a black screen.' : 'L’app ha intercettato un errore di esecuzione invece di mostrare una schermata nera.'}</p>
           <pre style={{ whiteSpace: 'pre-wrap', background: 'rgba(255,255,255,.08)', padding: 16, borderRadius: 16, color: '#fecaca' }}>{String(this.state.error?.stack || this.state.error?.message || this.state.error)}</pre>
           <button
             onClick={() => {
@@ -32,7 +35,7 @@ class ErrorBoundary extends React.Component {
             }}
             style={{ marginTop: 16, padding: '10px 14px', borderRadius: 12, border: '1px solid rgba(56,189,248,.5)', background: 'rgba(56,189,248,.15)', color: '#e0f2fe', fontWeight: 700 }}
           >
-            Cancella dati locali e ricarica
+            {startupLang === 'en' ? 'Clear local data and reload' : 'Cancella dati locali e ricarica'}
           </button>
         </div>
       )

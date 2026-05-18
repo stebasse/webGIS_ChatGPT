@@ -3,7 +3,7 @@ import { t } from '../i18n';
 export default function AddDataMenu({ setActiveTab, language = 'it' }) {
   return (
     <div className="w-full max-w-4xl h-full flex flex-col items-center justify-center animate-in fade-in duration-500 pointer-events-auto pb-20">
-      <h2 className="text-3xl font-bold text-white uppercase tracking-[0.3em] mb-16">{language === 'en' ? 'Add data to project' : 'Aggiungi dati al progetto'}</h2>
+      <h2 className="text-3xl font-bold text-white uppercase tracking-[0.3em] mb-16">{t(language, 'addDataToProject')}</h2>
       <div className="flex gap-10">
          <button 
            onClick={() => setActiveTab('new-layer')}
@@ -14,7 +14,7 @@ export default function AddDataMenu({ setActiveTab, language = 'it' }) {
             </div>
             <div className="text-center">
                <h3 className="text-xl font-bold text-white uppercase tracking-widest">{t(language, 'createLayer')}</h3>
-               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{language === 'en' ? 'Define a new vector schema' : 'Definisci un nuovo schema vettoriale'}</p>
+               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{t(language, 'defineNewVectorSchema')}</p>
             </div>
          </button>
 
@@ -27,7 +27,7 @@ export default function AddDataMenu({ setActiveTab, language = 'it' }) {
             </div>
             <div className="text-center">
                <h3 className="text-xl font-bold text-white uppercase tracking-widest">{t(language, 'uploadLayer')}</h3>
-               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{language === 'en' ? 'Import SHP, KML, GeoJSON' : 'Importa SHP, KML, GeoJSON'}</p>
+               <p className="text-[10px] text-slate-500 font-bold uppercase mt-2 tracking-widest">{t(language, 'importShpKmlGeojson')}</p>
             </div>
          </button>
       </div>
