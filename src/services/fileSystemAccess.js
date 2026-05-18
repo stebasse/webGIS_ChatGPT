@@ -35,6 +35,41 @@ export const chooseWritableDirectory = async () => {
   return handle;
 };
 
+export const chooseBestWritableTarget = async ({ suggestedName, description = 'Output file', accept } = {}) => {
+  const directoryErrors = [];
+
+  if (canChooseDirectory()) {
+    try {
+      const directoryHandle = await chooseWritableDirectory();
+      if (directoryHandle) {
+        return { kind: 'directory', handle: directoryHandle, label: directoryHandle.name || 'Cartella selezionata' };
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') return null;
+      directoryErrors.push(error);
+    }
+  }
+
+  if (canChooseOutputFile()) {
+    try {
+      const fileHandle = await chooseWritableFile({ suggestedName, description, accept });
+      if (fileHandle) {
+        return { kind: 'file', handle: fileHandle, label: fileHandle.name || suggestedName || 'File selezionato' };
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') return null;
+      if (directoryErrors.length) error.directoryErrors = directoryErrors;
+      throw error;
+    }
+  }
+
+  if (directoryErrors.length) {
+    console.warn('Directory picker non disponibile o non autorizzato:', directoryErrors);
+  }
+
+  return { kind: 'download', label: 'Download browser' };
+};
+
 export const chooseWritableFile = async ({ suggestedName, description = 'Output file', accept }) => {
   if (!canChooseOutputFile()) return null;
   const handle = await window.showSaveFilePicker({
@@ -112,4 +147,4 @@ export const downloadTextFileFallback = (filename, fileContent, fileMime = 'text
   URL.revokeObjectURL(url);
 };
 
-export const fileSystemUnavailableMessage = 'La scelta diretta della cartella non è supportata da questo browser/WebView. Se disponibile verrà aperto un selettore cartella di sola lettura; il salvataggio userà il file picker o il download standard.';
+export const fileSystemUnavailableMessage = 'La scelta diretta della cartella non è supportata da questo browser/WebView. Userò il file picker quando disponibile oppure il download standard del browser.';

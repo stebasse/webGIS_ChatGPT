@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, chooseDirectoryLabelFallback, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle, downloadTextFileFallback } from '../services/fileSystemAccess';
+import { chooseBestWritableTarget, fileSystemUnavailableMessage, writeTextToDirectory, writeTextToFileHandle, downloadTextFileFallback } from '../services/fileSystemAccess';
 
 const FIELD_TYPES = ['String', 'Integer', 'Double', 'Date', 'Boolean'];
 const DEFAULT_FIELDS = [
@@ -47,37 +47,32 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
   const chooseFolder = async () => {
     try {
-      const directoryHandle = await chooseWritableDirectory();
-      if (directoryHandle) {
-        setDirHandle(directoryHandle);
+      const target = getOutputTargetInfo();
+      const outputTarget = await chooseBestWritableTarget({
+        suggestedName: target.filename,
+        description: 'Layer file',
+        accept: target.accept,
+      });
+
+      if (!outputTarget) return;
+
+      if (outputTarget.kind === 'directory') {
+        setDirHandle(outputTarget.handle);
         setFileHandle(null);
-        setDirLabel(directoryHandle.name || 'Cartella selezionata');
+        setDirLabel(outputTarget.label);
         return;
       }
 
-      if (canChooseOutputFile()) {
-        const target = getOutputTargetInfo();
-        const handle = await chooseWritableFile({
-          suggestedName: target.filename,
-          description: 'Layer file',
-          accept: target.accept,
-        });
-        if (handle) {
-          setFileHandle(handle);
-          setDirHandle(null);
-          setDirLabel(handle.name || 'File selezionato');
-          return;
-        }
-      }
-
-      const fallbackDirectory = await chooseDirectoryLabelFallback();
-      if (fallbackDirectory) {
+      if (outputTarget.kind === 'file') {
+        setFileHandle(outputTarget.handle);
         setDirHandle(null);
-        setFileHandle(null);
-        setDirLabel(`${fallbackDirectory.name} (download browser)`);
+        setDirLabel(outputTarget.label);
         return;
       }
 
+      setDirHandle(null);
+      setFileHandle(null);
+      setDirLabel(outputTarget.label || 'Download browser');
       alert(fileSystemUnavailableMessage);
     } catch (e) {
       if (e?.name !== 'AbortError') alert('Impossibile selezionare il percorso: ' + (e?.message || e));

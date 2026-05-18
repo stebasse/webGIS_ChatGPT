@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { chooseWritableDirectory, chooseWritableFile, canChooseOutputFile, chooseDirectoryLabelFallback, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
+import { chooseBestWritableTarget, fileSystemUnavailableMessage } from '../services/fileSystemAccess';
 
 export default function DataTableView({ collectedPoints, setCollectedPoints, layers, exportData, projectCrs = 'EPSG:4326' }) {
   const [filterLayerId, setFilterLayerId] = useState('all');
@@ -54,37 +54,32 @@ export default function DataTableView({ collectedPoints, setCollectedPoints, lay
 
   const chooseExportFolder = async () => {
     try {
-      const directoryHandle = await chooseWritableDirectory();
-      if (directoryHandle) {
-        setExportDirectoryHandle(directoryHandle);
+      const target = getExportTargetInfo();
+      const outputTarget = await chooseBestWritableTarget({
+        suggestedName: target.suggestedName,
+        description: 'GIS export',
+        accept: target.accept,
+      });
+
+      if (!outputTarget) return;
+
+      if (outputTarget.kind === 'directory') {
+        setExportDirectoryHandle(outputTarget.handle);
         setExportFileHandle(null);
-        setExportDirectoryLabel(directoryHandle.name || 'Cartella selezionata');
+        setExportDirectoryLabel(outputTarget.label);
         return;
       }
 
-      if (canChooseOutputFile()) {
-        const target = getExportTargetInfo();
-        const handle = await chooseWritableFile({
-          suggestedName: target.suggestedName,
-          description: 'GIS export',
-          accept: target.accept,
-        });
-        if (handle) {
-          setExportFileHandle(handle);
-          setExportDirectoryHandle(null);
-          setExportDirectoryLabel(handle.name || 'File selezionato');
-          return;
-        }
-      }
-
-      const fallbackDirectory = await chooseDirectoryLabelFallback();
-      if (fallbackDirectory) {
+      if (outputTarget.kind === 'file') {
+        setExportFileHandle(outputTarget.handle);
         setExportDirectoryHandle(null);
-        setExportFileHandle(null);
-        setExportDirectoryLabel(`${fallbackDirectory.name} (download browser)`);
+        setExportDirectoryLabel(outputTarget.label);
         return;
       }
 
+      setExportDirectoryHandle(null);
+      setExportFileHandle(null);
+      setExportDirectoryLabel(outputTarget.label || 'Download browser');
       alert(fileSystemUnavailableMessage + ' Verrà usato il download standard quando premi Esporta.');
     } catch (err) {
       if (err?.name !== 'AbortError') {
