@@ -28,6 +28,7 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
   const lastPoint = useRef(null);
   const activePointers = useRef(new Map());
   const twoFingerPan = useRef(false);
+  const middleMousePan = useRef(false);
   const lastPanCenter = useRef(null);
   const pendingTouchLatLng = useRef(null);
 
@@ -68,6 +69,23 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
     };
 
     const handlePointerDown = (ev) => {
+      const isMiddleMouseButton = ev.pointerType === 'mouse' && ev.button === 1;
+
+      if (isMiddleMouseButton) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        container.setPointerCapture?.(ev.pointerId);
+        activePointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, type: ev.pointerType });
+        middleMousePan.current = true;
+        isDragging.current = false;
+        lastPoint.current = null;
+        pendingTouchLatLng.current = null;
+        lastPanCenter.current = L.point(ev.clientX, ev.clientY);
+        map.dragging.disable();
+        map.doubleClickZoom.disable();
+        return;
+      }
+
       if (ev.button !== undefined && ev.button !== 0) return;
       activePointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, type: ev.pointerType });
 
@@ -103,6 +121,17 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       if (!activePointers.current.has(ev.pointerId)) return;
       activePointers.current.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, type: ev.pointerType });
 
+      if (middleMousePan.current) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const center = L.point(ev.clientX, ev.clientY);
+        if (lastPanCenter.current) {
+          map.panBy(lastPanCenter.current.subtract(center), { animate: false });
+        }
+        lastPanCenter.current = center;
+        return;
+      }
+
       if (twoFingerPan.current) {
         ev.preventDefault();
         ev.stopPropagation();
@@ -130,6 +159,18 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       const wasTracked = activePointers.current.has(ev.pointerId);
       activePointers.current.delete(ev.pointerId);
       container.releasePointerCapture?.(ev.pointerId);
+
+      if (middleMousePan.current) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        middleMousePan.current = false;
+        lastPanCenter.current = null;
+        isDragging.current = false;
+        lastPoint.current = null;
+        map.dragging.enable();
+        map.doubleClickZoom.enable();
+        return;
+      }
 
       if (twoFingerPan.current) {
         ev.preventDefault();
@@ -164,11 +205,20 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
     container.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('pointercancel', handlePointerUp);
 
+    const preventMiddleMouseAuxClick = (ev) => {
+      if (ev.button === 1) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    };
+    container.addEventListener('auxclick', preventMiddleMouseAuxClick);
+
     return () => {
       container.removeEventListener('pointerdown', handlePointerDown);
       container.removeEventListener('pointermove', handlePointerMove);
       container.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('pointercancel', handlePointerUp);
+      container.removeEventListener('auxclick', preventMiddleMouseAuxClick);
       container.style.touchAction = '';
       map.dragging.enable();
       map.doubleClickZoom.enable();
@@ -176,6 +226,7 @@ export default function MapController({ gpsPosition, mapRotation, setMapBearing,
       lastPoint.current = null;
       activePointers.current.clear();
       twoFingerPan.current = false;
+      middleMousePan.current = false;
       lastPanCenter.current = null;
       pendingTouchLatLng.current = null;
     };
