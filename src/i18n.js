@@ -37,7 +37,7 @@ const TEXT = {
     resetDefaults: 'Ripristina predefiniti', theme: 'Tema', units: 'Unità', metric: 'Metrico', imperial: 'Imperiale', light: 'Chiaro', dark: 'Scuro',
     apply: 'Applica', add: 'Aggiungi', name: 'Nome', type: 'Tipo', fields: 'Campi', fieldName: 'Nome campo', fieldType: 'Tipo campo',
     point: 'Punto', line: 'Linea', polygon: 'Poligono', table: 'Tabella', string: 'Testo', integer: 'Intero', double: 'Decimale', date: 'Data', boolean: 'Booleano',
-    selectedFolder: 'Cartella selezionata', selectedFile: 'File selezionato', unknown: 'Sconosciuto', selectedCrs: 'CRS selezionato',
+    selectedFolder: 'Cartella selezionata', selectedFile: 'File selezionato', unknown: 'Sconosciuto', selectedCrs: 'CRS selezionato', directSave: 'Salvataggio diretto', directSaveHelp: 'La web app scriverà nella cartella scelta, se il browser mantiene il permesso.', selectedFileHelp: 'Il file è stato scelto con il selettore del browser e verrà sovrascritto al salvataggio.', browserDownloadHelp: 'Il file verrà scaricato nella cartella Download gestita dal browser. Il percorso mostrato è indicativo, non un percorso fisico garantito.', browserDownloadDefaultHelp: 'Nessuna cartella reale selezionata: verrà usato il download standard del browser.', downloadsFolderHint: 'Download del browser', chooseDestination: 'Scegli', changeDestination: 'Cambia', androidDownloadHint: 'Su Android cerca il file in Gestione file → Download oppure nella cronologia download del browser.',
   },
   en: {
     explore: 'Explore', geometry: 'Geometry', data: 'Data', settings: 'Settings',
@@ -72,7 +72,7 @@ const TEXT = {
     resetDefaults: 'Reset defaults', theme: 'Theme', units: 'Units', metric: 'Metric', imperial: 'Imperial', light: 'Light', dark: 'Dark',
     apply: 'Apply', add: 'Add', name: 'Name', type: 'Type', fields: 'Fields', fieldName: 'Field name', fieldType: 'Field type',
     point: 'Point', line: 'Line', polygon: 'Polygon', table: 'Table', string: 'String', integer: 'Integer', double: 'Double', date: 'Date', boolean: 'Boolean',
-    selectedFolder: 'Selected folder', selectedFile: 'Selected file', unknown: 'Unknown', selectedCrs: 'Selected CRS',
+    selectedFolder: 'Selected folder', selectedFile: 'Selected file', unknown: 'Unknown', selectedCrs: 'Selected CRS', directSave: 'Direct save', directSaveHelp: 'The web app will write to the selected folder if the browser keeps the permission.', selectedFileHelp: 'The file was selected with the browser picker and will be overwritten on save.', browserDownloadHelp: 'The file will be downloaded to the folder managed by the browser. The displayed path is indicative, not a guaranteed physical path.', browserDownloadDefaultHelp: 'No real folder selected: the standard browser download will be used.', downloadsFolderHint: 'Browser downloads', chooseDestination: 'Choose', changeDestination: 'Change', androidDownloadHint: 'On Android, look for the file in Files → Downloads or in the browser download history.',
   },
 };
 
