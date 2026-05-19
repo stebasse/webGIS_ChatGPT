@@ -35,6 +35,16 @@ import { updateFeatureProperties as patchFeatureProperties } from './domain/gis/
 import { useDrawingLegacyState } from './state/drawing/DrawingContext.jsx';
 import { exportFeatures } from './services/exportService';
 
+
+const getLayerGeometryKind = (layer) => {
+  const raw = String(layer?.type || '').toLowerCase();
+  if (raw.includes('table') || raw.includes('tabella')) return 'Table';
+  if (raw.includes('point') || raw.includes('punto')) return 'Point';
+  if (raw.includes('line') || raw.includes('linea')) return 'Line';
+  if (raw.includes('polygon') || raw.includes('poligono')) return 'Polygon';
+  return null;
+};
+
 const goToIcon = new L.DivIcon({
   className: '',
   iconSize: [32, 32],
@@ -228,8 +238,8 @@ export default function App() {
       setIsTocSidebarOpen(true);
       return false;
     }
-    const geomType = activeLayer.type;
-    if (!geomType?.includes('Point')) {
+    const geomKind = getLayerGeometryKind(activeLayer);
+    if (geomKind !== 'Point') {
       alert('Seleziona un layer puntuale per aggiungere punti sulla mappa.');
       return false;
     }
@@ -437,8 +447,8 @@ export default function App() {
         alert('Nessun layer presente. Crea prima un layer.');
         return;
       }
-      const activeLayer = layers.find(l => l.id === selectedLayerId) || layers.find(l => l.type?.includes('Table')) || layers[0];
-      if (activeLayer.type?.includes('Table')) {
+      const activeLayer = layers.find(l => l.id === selectedLayerId) || layers.find(l => getLayerGeometryKind(l) === 'Table') || layers[0];
+      if (getLayerGeometryKind(activeLayer) === 'Table') {
         createTableRow(activeLayer);
       } else {
         setActiveTab('explore');
@@ -458,14 +468,14 @@ export default function App() {
       setIsTocSidebarOpen(true);
       return;
     }
-    const geomType = activeLayer.type; // e.g. "Vector - Point", "Vector - Table"
+    const geomKind = getLayerGeometryKind(activeLayer);
 
-    if (geomType.includes('Table')) {
+    if (geomKind === 'Table') {
       createTableRow(activeLayer);
       return;
     }
 
-    if (geomType.includes('Point')) {
+    if (geomKind === 'Point') {
       let position = gpsState.position;
       let accuracy = gpsState.accuracy;
 
@@ -485,7 +495,7 @@ export default function App() {
       createPointFeatureAtPosition(position, accuracy);
     } else {
       // Line or Polygon — start drawing mode
-      const mode = geomType.includes('Line') ? 'Line' : 'Polygon';
+      const mode = geomKind === 'Line' ? 'Line' : 'Polygon';
       setDrawingMode(mode);
       setDraftCoordinates([]);
       setActiveTab('explore');

@@ -68,7 +68,7 @@ export default function ExploreHUD({
     ? FALLBACK_CRS
     : [{ code: projectCrs || 'EPSG:4326', name: tt('selectedCrs') }, ...FALLBACK_CRS];
   const basemapIsDark = activeBasemap === 'carto_dark' || activeBasemap === 'satellite';
-  const activeLayerIsPoint = !!activeLayer?.type?.includes('Point');
+  const activeLayerIsPoint = getLayerGeometryKind(activeLayer) === 'Point';
 
   const formatDistance = (m) => {
     if (!m || m <= 0) return '—';
@@ -124,7 +124,7 @@ export default function ExploreHUD({
           </button>
           {openStatusMenu === 'layer' && !statusMenusLocked && (
             <div className="absolute left-0 top-full mt-1 w-full max-h-48 overflow-y-auto no-scrollbar glass bg-slate-950/95 border border-white/20 rounded-2xl shadow-2xl p-1">
-              {hasSelectableLayers ? layers.map(layer => (
+              {hasSelectableLayers && layers.map(layer => (
                 <button
                   key={layer.id}
                   type="button"
@@ -134,26 +134,24 @@ export default function ExploreHUD({
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: layer.colorHex || '#0ea5e9' }} />
                   <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{layer.name}</span>
                 </button>
-              )) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => { setActiveTab?.('new-layer'); setOpenStatusMenu(null); }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left text-white hover:bg-white/10 transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{tt('createNewLayer')}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setActiveTab?.('upload'); setOpenStatusMenu(null); }}
-                    className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left text-white hover:bg-white/10 transition-colors"
-                  >
-                    <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
-                    <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{tt('uploadExistingLayer')}</span>
-                  </button>
-                </>
-              )}
+              ))}
+              {hasSelectableLayers && <div className="my-1 border-t border-white/10" />}
+              <button
+                type="button"
+                onClick={() => { setActiveTab?.('new-layer'); setOpenStatusMenu(null); }}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left text-white hover:bg-white/10 transition-colors"
+              >
+                <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{tt('createNewLayer')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActiveTab?.('upload'); setOpenStatusMenu(null); }}
+                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-xl text-left text-white hover:bg-white/10 transition-colors"
+              >
+                <svg className="w-3 h-3 text-primary flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4" /></svg>
+                <span className="min-w-0 flex-1 truncate text-[9px] font-bold uppercase tracking-widest">{tt('uploadExistingLayer')}</span>
+              </button>
             </div>
           )}
         </div>

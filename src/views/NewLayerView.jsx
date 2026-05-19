@@ -90,44 +90,19 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     setShowOutputTargetDialog(false);
   };
 
-  const getOutputTargetStatus = () => {
+  const getVisibleOutputPath = () => {
     const target = getOutputTargetInfo();
-
     if (dirHandle) {
-      const label = dirLabel || dirHandle.name || tt('selectedFolder');
-      return {
-        mode: 'direct',
-        icon: '🟢',
-        title: tt('directSave'),
-        path: `${label}/${target.filename}`,
-        help: tt('directSaveHelp'),
-        cta: tt('changeDestination'),
-      };
+      return `${dirLabel || dirHandle.name || tt('selectedFolder')}/${target.filename}`;
     }
-
     if (fileHandle) {
-      return {
-        mode: 'file',
-        icon: '🟢',
-        title: tt('selectedFile'),
-        path: fileHandle.name || target.filename,
-        help: tt('selectedFileHelp'),
-        cta: tt('changeDestination'),
-      };
+      return fileHandle.name || target.filename;
     }
-
-    const isExplicitBrowserDownload = dirLabel === tt('browserDownload');
-    return {
-      mode: 'download',
-      icon: '🟡',
-      title: tt('browserDownload'),
-      path: `${tt('downloadsFolderHint')}/${target.filename}`,
-      help: isExplicitBrowserDownload ? tt('browserDownloadHelp') : tt('browserDownloadDefaultHelp'),
-      cta: tt('chooseDestination'),
-    };
+    if (dirLabel === tt('browserDownload')) {
+      return `${tt('browserDownload')}/${target.filename}`;
+    }
+    return `${tt('notSelected')} (${tt('defaultLabel')}: ${tt('browserDownload')}/${target.filename})`;
   };
-
-  const getVisibleOutputPath = () => getOutputTargetStatus().path;
 
   const validate = () => {
     const errs = {};
@@ -184,7 +159,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
     setLayers(prev => [...prev, layer]);
     setSelectedLayerId(id);
-    setNewLayer({ name: '', type: 'Punto' });
+    setNewLayer({ name: '', type: 'Point' });
     setFields(DEFAULT_FIELDS);
     setFormat('geojson');
     setDirHandle(null);
@@ -195,9 +170,9 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   };
 
   const geomTipos = [
-    { id: 'Punto', nameKey: 'point', icon: null },
-    { id: 'Linea', nameKey: 'line', icon: 'M4 12h16' },
-    { id: 'Poligono', nameKey: 'polygon', icon: 'M4 4h16v16H4z' },
+    { id: 'Point', nameKey: 'point', icon: null },
+    { id: 'Line', nameKey: 'line', icon: 'M4 12h16' },
+    { id: 'Polygon', nameKey: 'polygon', icon: 'M4 4h16v16H4z' },
     { id: 'Table', nameKey: 'table', icon: 'M4 6h16M4 12h16M4 18h16' }
   ];
 
@@ -222,12 +197,12 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
                 >
                   <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${newLayer.type === type.id ? 'text-primary' : 'text-slate-500'}`}>
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      {type.id === 'Punto'
+                      {type.id === 'Point'
                         ? <circle cx="12" cy="12" r="6" fill="currentColor" fillOpacity="0.4" />
                         : <path d={type.icon} />}
                     </svg>
                   </div>
-                  <span className={`text-[9px] font-bold uppercase tracking-widest text-center leading-tight ${newLayer.type === type.id ? 'text-white' : 'text-slate-500'}`}>{type.id === 'Punto' ? tt('point') : type.id === 'Linea' ? tt('line') : type.id === 'Poligono' ? tt('polygon') : tt('table')}</span>
+                  <span className={`text-[9px] font-bold uppercase tracking-widest text-center leading-tight ${newLayer.type === type.id ? 'text-white' : 'text-slate-500'}`}>{type.id === 'Point' ? tt('point') : type.id === 'Line' ? tt('line') : type.id === 'Polygon' ? tt('polygon') : tt('table')}</span>
                 </button>
               ))}
             </div>
@@ -277,31 +252,17 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             {/* Save folder */}
             <div className="space-y-2">
               <label className="text-[9px] font-bold text-slate-600 uppercase tracking-wider">{tt('outputFolder')}</label>
-              {(() => {
-                const outputStatus = getOutputTargetStatus();
-                return (
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-3 space-y-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className={`inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest ${outputStatus.mode === 'download' ? 'bg-amber-400/10 text-amber-300 border border-amber-400/20' : 'bg-emerald-400/10 text-emerald-300 border border-emerald-400/20'}`}>
-                          <span>{outputStatus.icon}</span>
-                          <span>{outputStatus.title}</span>
-                        </div>
-                        <div className="mt-2 text-xs text-emerald-300 font-mono break-all">📁 {outputStatus.path}</div>
-                        <p className="mt-1 text-[9px] leading-snug text-slate-500">{outputStatus.help}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={chooseFolder}
-                        className="shrink-0 flex items-center gap-2 px-3 py-2 bg-white/5 border border-white/10 rounded-xl text-[9px] font-bold text-slate-300 hover:border-primary hover:text-white transition-all uppercase tracking-widest"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
-                        {outputStatus.cta}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={chooseFolder}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-bold text-slate-400 hover:border-primary hover:text-white transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLineacap="round" strokeLineajoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                  {tt('choose')} {tt('output')}
+                </button>
+                <span className="text-xs text-emerald-400 font-mono break-all flex-1 min-w-0">📁 {getVisibleOutputPath()}</span>
+              </div>
             </div>
           </section>
 
@@ -382,7 +343,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
         <div className="px-4 sm:px-8 py-4 border-t border-white/5 bg-black/20 flex justify-between items-center gap-4">
           <button
             onClick={() => {
-              setNewLayer({ name: '', type: 'Punto' });
+              setNewLayer({ name: '', type: 'Point' });
               setFields(DEFAULT_FIELDS);
               setFormat('geojson');
               setDirHandle(null);
@@ -435,7 +396,6 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
             </div>
 
             <p className="text-[8px] text-slate-500 leading-snug">{tt('folderChoiceHelp')}</p>
-            <p className="text-[8px] text-amber-300/80 leading-snug">{tt('androidDownloadHint')}</p>
           </div>
         </div>
       )}
