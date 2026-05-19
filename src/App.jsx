@@ -31,6 +31,8 @@ import { useProjectState } from './state/useProjectState';
 import { resolveFeatureColor } from './services/symbologyService';
 import { formatMeasureValue as formatMeasurementValue } from './services/measurementService';
 import { buildDefaultProperties, coerceFieldValue, createDraftTableFeature, getDefaultValueForType, getFieldType } from './services/featureService';
+import { updateFeatureProperties as patchFeatureProperties } from './domain/gis/featureEngine';
+import { useDrawingLegacyState } from './state/drawing/DrawingContext.jsx';
 import { exportFeatures } from './services/exportService';
 
 const goToIcon = new L.DivIcon({
@@ -59,19 +61,27 @@ export default function App() {
 
   const [mapBearing, setMapBearing] = useState(0);
   const [gridScaleMeters, setGridScaleMeters] = useState(100);
-  const [drawingMode, setDrawingMode] = useState(false);  // false | 'Line' | 'Polygon'
-  const [draftCoordinates, setDraftCoordinates] = useState([]);
+  const {
+    drawingMode,
+    setDrawingMode,
+    draftCoordinates,
+    setDraftCoordinates,
+    isFreehandMode,
+    setIsFreehandMode,
+    pointTapMode,
+    setPointTapMode,
+    measureMode,
+    setMeasureMode,
+    measureCoordinates,
+    setMeasureCoordinates,
+  } = useDrawingLegacyState();
   const [layerFilter, setLayerFilter] = useState('');
   const [newLayer, setNewLayer] = useState(EMPTY_NEW_LAYER);
   const [popupFeature, setPopupFeature] = useState(null);
   const [isEditingPopup, setIsEditingPopup] = useState(false);
-  const [isFreehandMode, setIsFreehandMode] = useState(false);
-  const [pointTapMode, setPointTapMode] = useState(false);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const [showAddFieldForm, setShowAddFieldForm] = useState(false);
   const [newPopupField, setNewPopupField] = useState(EMPTY_NEW_FIELD);
-  const [measureMode, setMeasureMode] = useState(false); // false | 'Distance' | 'Area'
-  const [measureCoordinates, setMeasureCoordinates] = useState([]);
   const [goToMarker, setGoToMarker] = useState(null);
   const [scaleLocked, setScaleLocked] = useState(false);
   const [lockedScaleDenominator, setLockedScaleDenominator] = useState(null);
@@ -403,6 +413,15 @@ export default function App() {
   };
 
 
+
+
+  const updateFeatureProperties = useCallback((featureId, patch) => {
+    setCollectedPoints(prev => patchFeatureProperties(prev, featureId, patch));
+    setPopupFeature(prev => {
+      if (!prev?.feature || prev.feature.properties?.id !== featureId) return prev;
+      return { ...prev, feature: { ...prev.feature, properties: { ...prev.feature.properties, ...patch } } };
+    });
+  }, [setCollectedPoints]);
 
   const createTableRow = (layer) => {
     const newFeature = createDraftTableFeature(layer);

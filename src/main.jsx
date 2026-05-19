@@ -3,9 +3,15 @@ import { createRoot } from 'react-dom/client'
 import React from 'react'
 import './index.css'
 import App from './App.jsx'
+import AppProviders from './app/AppProviders.jsx'
 
 let startupLang = 'it';
 try { startupLang = JSON.parse(localStorage.getItem('stitch_gis_settings') || '{}')?.language === 'en' ? 'en' : 'it'; } catch { startupLang = 'it'; }
+
+
+window.addEventListener('vite:preloadError', () => {
+  window.location.reload();
+});
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -47,7 +53,9 @@ class ErrorBoundary extends React.Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      <AppProviders>
+        <App />
+      </AppProviders>
     </ErrorBoundary>
   </StrictMode>,
 )
