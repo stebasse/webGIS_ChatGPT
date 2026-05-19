@@ -113,6 +113,8 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
   const [importKind, setImportKind] = useState('vector');
   const [wmsUrl, setWmsUrl] = useState('');
   const [wmsLayerName, setWmsLayerName] = useState('');
+  const [wmsDisplayName, setWmsDisplayName] = useState('');
+  const [wmsCapabilities, setWmsCapabilities] = useState([]);
 
   const handleFilePick = async (e) => {
     const files = Array.from(e.target.files || []);
@@ -173,12 +175,78 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
     }
   };
 
+  const buildWmsCapabilitiesUrl = (value) => {
+    const raw = normalizeWmsUrl(value);
+    if (!raw) return '';
+    try {
+      const url = new URL(raw);
+      url.searchParams.set('service', 'WMS');
+      url.searchParams.set('request', 'GetCapabilities');
+      return url.toString();
+    } catch {
+      const sep = raw.includes('?') ? '&' : '?';
+      return `${raw}${sep}service=WMS&request=GetCapabilities`;
+    }
+  };
+
+  const parseWmsCapabilities = (xmlText) => {
+    const doc = new DOMParser().parseFromString(xmlText, 'text/xml');
+    if (doc.querySelector('parsererror')) throw new Error('INVALID_WMS_CAPABILITIES');
+    const serviceTitle = doc.querySelector('Service > Title')?.textContent?.trim() || 'WMS';
+    const layersFound = Array.from(doc.querySelectorAll('Capability Layer Layer'))
+      .map(node => ({
+        name: node.querySelector(':scope > Name')?.textContent?.trim() || '',
+        title: node.querySelector(':scope > Title')?.textContent?.trim() || '',
+      }))
+      .filter(item => item.name);
+    return { serviceTitle, layers: layersFound };
+  };
+
+  const loadWmsCapabilities = async () => {
+    const capabilitiesUrl = buildWmsCapabilitiesUrl(wmsUrl);
+    if (!capabilitiesUrl) {
+      setStatus({ type: 'error', msg: language === 'en' ? 'Enter a WMS URL first.' : 'Inserisci prima un URL WMS.' });
+      return;
+    }
+    setImporting(true);
+    setStatus(null);
+    try {
+      const res = await fetch(capabilitiesUrl);
+      if (!res.ok) throw new Error(`HTTP_${res.status}`);
+      const parsed = parseWmsCapabilities(await res.text());
+      setWmsCapabilities(parsed.layers);
+      if (!wmsLayerName && parsed.layers[0]?.name) setWmsLayerName(parsed.layers[0].name);
+      setStatus({
+        type: 'success',
+        msg: language === 'en'
+          ? `Found ${parsed.layers.length} WMS layers in ${parsed.serviceTitle}. Select one and connect.`
+          : `Trovati ${parsed.layers.length} layer WMS in ${parsed.serviceTitle}. Scegline uno e connetti.`
+      });
+    } catch (err) {
+      setWmsCapabilities([]);
+      setStatus({
+        type: 'warn',
+        msg: language === 'en'
+          ? 'Unable to read GetCapabilities. If the server blocks browser access, enter the exact technical layer name manually.'
+          : 'Impossibile leggere GetCapabilities. Se il server blocca l’accesso dal browser, inserisci manualmente il nome tecnico esatto del layer.'
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleWmsImport = async () => {
     const url = normalizeWmsUrl(wmsUrl);
     const layerNameFromUrl = guessWmsLayerName(wmsUrl);
-    const layerName = (wmsLayerName || layerNameFromUrl || 'WMS layer').trim();
+    const technicalLayerName = (wmsLayerName || layerNameFromUrl).trim();
+    const layerTitleFromCapabilities = wmsCapabilities.find(item => item.name === technicalLayerName)?.title || '';
+    const layerName = (wmsDisplayName || layerTitleFromCapabilities || technicalLayerName || 'WMS layer').trim();
     if (!url) {
       setStatus({ type: 'error', msg: language === 'en' ? 'Enter a valid WMS URL.' : 'Inserisci un URL WMS valido.' });
+      return;
+    }
+    if (!technicalLayerName) {
+      setStatus({ type: 'error', msg: language === 'en' ? 'Enter/select the technical WMS layer name. The display name alone is not enough.' : 'Inserisci/seleziona il nome tecnico del layer WMS. Il solo nome visualizzato non basta.' });
       return;
     }
     const layerId = Date.now();
@@ -198,7 +266,7 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
       symbology: { mode: 'single', attribute: null, rules: [] },
       wms: {
         url,
-        layers: layerNameFromUrl || layerName,
+        layers: technicalLayerName,
         format: 'image/png',
         transparent: true,
         version: '1.3.0',
@@ -301,13 +369,28 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
             <div className="w-full max-w-md p-5 rounded-[2rem] bg-white/5 border border-white/10 space-y-4">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">URL WMS</label>
-                <textarea value={wmsUrl} onChange={(e) => setWmsUrl(e.target.value)} placeholder="https://.../wms?service=WMS&request=GetMap&layers=..." rows={4} className="w-full bg-black/25 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-primary resize-none" />
+                <textarea value={wmsUrl} onChange={(e) => { setWmsUrl(e.target.value); setWmsCapabilities([]); }} placeholder="https://.../wms?service=WMS" rows={3} className="w-full bg-black/25 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-primary resize-none" />
+              </div>
+              <button type="button" onClick={loadWmsCapabilities} disabled={importing || !wmsUrl.trim()} className="w-full px-4 py-3 rounded-2xl border border-primary/30 bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed">
+                {language === 'en' ? 'Read WMS layers' : 'Leggi layer WMS'}
+              </button>
+              {wmsCapabilities.length > 0 && (
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{language === 'en' ? 'Available layers' : 'Layer disponibili'}</label>
+                  <select value={wmsLayerName} onChange={(e) => setWmsLayerName(e.target.value)} className="w-full bg-black/25 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-primary">
+                    {wmsCapabilities.map(item => <option key={item.name} value={item.name} className="bg-[#0f172a] text-white">{item.title ? `${item.title} — ${item.name}` : item.name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{language === 'en' ? 'Technical layer name' : 'Nome tecnico layer'}</label>
+                <input value={wmsLayerName} onChange={(e) => setWmsLayerName(e.target.value)} placeholder={language === 'en' ? 'Required, e.g. namespace:layer' : 'Obbligatorio, es. namespace:layer'} className="w-full bg-black/25 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-primary" />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{language === 'en' ? 'Layer name' : 'Nome layer'}</label>
-                <input value={wmsLayerName} onChange={(e) => setWmsLayerName(e.target.value)} placeholder={language === 'en' ? 'Optional, or read from layers=...' : 'Opzionale, oppure letto da layers=...'} className="w-full bg-black/25 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-primary" />
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{language === 'en' ? 'Display name' : 'Nome visualizzato'}</label>
+                <input value={wmsDisplayName} onChange={(e) => setWmsDisplayName(e.target.value)} placeholder={language === 'en' ? 'Optional' : 'Opzionale'} className="w-full bg-black/25 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white outline-none focus:border-primary" />
               </div>
-              <p className="text-[10px] text-slate-500 leading-relaxed">{language === 'en' ? 'Paste a WMS GetMap or base service URL. If the URL contains layers=, it will be used automatically.' : 'Incolla un URL WMS GetMap o l’URL base del servizio. Se contiene layers=, verrà usato automaticamente.'}</p>
+              <p className="text-[10px] text-slate-500 leading-relaxed">{language === 'en' ? 'A WMS needs both the service URL and the exact technical layer name. Use “Read WMS layers” when the server allows GetCapabilities from the browser.' : 'Un WMS richiede sia l’URL del servizio sia il nome tecnico esatto del layer. Usa “Leggi layer WMS” quando il server permette GetCapabilities dal browser.'}</p>
             </div>
           )}
         </div>
@@ -328,7 +411,7 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
           <div className="p-4 rounded-2xl bg-black/20 border border-white/5"><p className="text-[10px] font-bold text-slate-500 uppercase mb-2">{tt('browserSupport')}</p><ul className="space-y-1 text-[10px] text-slate-400"><li>{tt('geojsonSupport')}</li><li>{tt('kmlSupport')}</li><li>{tt('prjSupport')}</li><li>{tt('unsupportedDesktopFormats')}</li></ul></div>
           {status && <div className={`p-4 rounded-2xl border text-xs ${statusColors[status.type]}`}>{status.msg}</div>}
         </div>
-        <div className="px-6 sm:px-10 py-5 border-t border-white/5 bg-black/20 flex justify-between items-center"><button onClick={() => setActiveTab('explore')} className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors">{tt('cancel')}</button><button onClick={handleImport} disabled={importing || (importKind === 'vector' && (!pickedFile || !pickedFile.text)) || (importKind === 'wms' && !wmsUrl.trim())} className="px-10 py-3 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20 text-xs disabled:opacity-40 disabled:cursor-not-allowed">{importing ? tt('importing') : (importKind === 'wms' ? (language === 'en' ? 'Connect WMS' : 'Connetti WMS') : tt('importLayer'))}</button></div>
+        <div className="px-6 sm:px-10 py-5 border-t border-white/5 bg-black/20 flex justify-between items-center"><button onClick={() => setActiveTab('explore')} className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-white transition-colors">{tt('cancel')}</button><button onClick={handleImport} disabled={importing || (importKind === 'vector' && (!pickedFile || !pickedFile.text)) || (importKind === 'wms' && (!wmsUrl.trim() || !(wmsLayerName.trim() || guessWmsLayerName(wmsUrl).trim())))} className="px-10 py-3 bg-primary text-white font-bold uppercase tracking-widest rounded-xl hover:scale-105 transition-transform shadow-xl shadow-primary/20 text-xs disabled:opacity-40 disabled:cursor-not-allowed">{importing ? tt('importing') : (importKind === 'wms' ? (language === 'en' ? 'Connect WMS' : 'Connetti WMS') : tt('importLayer'))}</button></div>
       </div>
     </div>
   );
