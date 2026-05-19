@@ -17,12 +17,14 @@ export const initialDrawingState = {
   },
 };
 
+const resolvePayload = (payload, currentValue) => (typeof payload === 'function' ? payload(currentValue) : payload);
+
 export function drawingReducer(state, action) {
   switch (action.type) {
     case 'drawing/set-mode':
-      return { ...state, drawingMode: action.payload };
+      return { ...state, drawingMode: resolvePayload(action.payload, state.drawingMode) };
     case 'drawing/set-draft':
-      return { ...state, draftCoordinates: action.payload };
+      return { ...state, draftCoordinates: resolvePayload(action.payload, state.draftCoordinates) || [] };
     case 'drawing/add-draft-coordinate':
       return { ...state, draftCoordinates: [...state.draftCoordinates, action.payload] };
     case 'drawing/undo-draft-coordinate':
@@ -30,11 +32,13 @@ export function drawingReducer(state, action) {
     case 'drawing/clear-draft':
       return { ...state, drawingMode: false, isFreehandMode: false, draftCoordinates: [] };
     case 'drawing/set-freehand':
-      return { ...state, isFreehandMode: action.payload };
+      return { ...state, isFreehandMode: resolvePayload(action.payload, state.isFreehandMode) };
     case 'drawing/set-point-tap':
-      return { ...state, pointTapMode: action.payload };
-    case 'measurement/set-mode':
-      return { ...state, measureMode: action.payload, measureCoordinates: action.payload ? state.measureCoordinates : [] };
+      return { ...state, pointTapMode: resolvePayload(action.payload, state.pointTapMode) };
+    case 'measurement/set-mode': {
+      const nextMode = resolvePayload(action.payload, state.measureMode);
+      return { ...state, measureMode: nextMode, measureCoordinates: nextMode ? state.measureCoordinates : [] };
+    }
     case 'measurement/toggle': {
       const next = state.measureMode === 'Distance' ? 'Area' : state.measureMode === 'Area' ? false : 'Distance';
       return { ...state, drawingMode: false, isFreehandMode: false, draftCoordinates: [], measureMode: next, measureCoordinates: [] };
@@ -42,7 +46,7 @@ export function drawingReducer(state, action) {
     case 'measurement/add-coordinate':
       return { ...state, measureCoordinates: [...state.measureCoordinates, action.payload] };
     case 'measurement/replace-coordinates':
-      return { ...state, measureCoordinates: action.payload || [] };
+      return { ...state, measureCoordinates: resolvePayload(action.payload, state.measureCoordinates) || [] };
     case 'measurement/clear':
       return { ...state, measureMode: false, measureCoordinates: [] };
     case 'drawing/select-feature':

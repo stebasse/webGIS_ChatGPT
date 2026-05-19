@@ -5,19 +5,19 @@ const DrawingStateContext = createContext(null);
 const DrawingDispatchContext = createContext(null);
 const DrawingLegacyContext = createContext(null);
 
-function createSetter(dispatch, type, currentValue) {
-  return updater => dispatch({ type, payload: typeof updater === 'function' ? updater(currentValue) : updater });
+function createSetter(dispatch, type) {
+  return updater => dispatch({ type, payload: updater });
 }
 
 export function DrawingProvider({ children }) {
   const [state, dispatch] = useReducer(drawingReducer, initialDrawingState);
 
-  const setDrawingMode = useCallback(createSetter(dispatch, 'drawing/set-mode', state.drawingMode), [state.drawingMode]);
-  const setDraftCoordinates = useCallback(createSetter(dispatch, 'drawing/set-draft', state.draftCoordinates), [state.draftCoordinates]);
-  const setIsFreehandMode = useCallback(createSetter(dispatch, 'drawing/set-freehand', state.isFreehandMode), [state.isFreehandMode]);
-  const setPointTapMode = useCallback(createSetter(dispatch, 'drawing/set-point-tap', state.pointTapMode), [state.pointTapMode]);
-  const setMeasureMode = useCallback(createSetter(dispatch, 'measurement/set-mode', state.measureMode), [state.measureMode]);
-  const setMeasureCoordinates = useCallback(createSetter(dispatch, 'measurement/replace-coordinates', state.measureCoordinates), [state.measureCoordinates]);
+  const setDrawingMode = useCallback(createSetter(dispatch, 'drawing/set-mode'), [dispatch]);
+  const setDraftCoordinates = useCallback(createSetter(dispatch, 'drawing/set-draft'), [dispatch]);
+  const setIsFreehandMode = useCallback(createSetter(dispatch, 'drawing/set-freehand'), [dispatch]);
+  const setPointTapMode = useCallback(createSetter(dispatch, 'drawing/set-point-tap'), [dispatch]);
+  const setMeasureMode = useCallback(createSetter(dispatch, 'measurement/set-mode'), [dispatch]);
+  const setMeasureCoordinates = useCallback(createSetter(dispatch, 'measurement/replace-coordinates'), [dispatch]);
 
   const legacyApi = useMemo(() => ({
     drawingMode: state.drawingMode,
