@@ -117,7 +117,11 @@ export default function DataTabellaView({ collectedPoints, setCollectedPoints, l
   const runExport = async () => {
     const layerId = filterLayerId === 'all' ? null : filterLayerId;
     const crs = exportOptions.crsMode === 'custom' ? exportOptions.customCrs : undefined;
-    await exportData?.({
+    const visiblePath = getVisibleExportPath();
+    const selectedLayerName = layerId
+      ? (layers.find(l => String(l.id) === String(layerId))?.name || exportOptions.filename || 'layer')
+      : tt('allLayers');
+    const result = await exportData?.({
       layerId,
       filename: exportOptions.filename,
       extension: exportOptions.extension,
@@ -127,7 +131,10 @@ export default function DataTabellaView({ collectedPoints, setCollectedPoints, l
       fileHandle: exportFileHandle,
       useSaveFilePicker: !exportDirectoryHandle && !exportFileHandle,
     });
-    setShowExportDialog(false);
+    if (result) {
+      alert(`${tt('layerSavedAt')} ${result.layerName || selectedLayerName}: ${result.path || visiblePath}`);
+      setShowExportDialog(false);
+    }
   };
 
   const standardKeys = new Set(['id', 'layerId', 'layerName', 'timestamp', 'accuracy', 'source', 'sourceCrs', 'exportCrs']);

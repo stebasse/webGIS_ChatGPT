@@ -32,6 +32,18 @@
   @apply backdrop-blur-xl bg-panel-dark border border-white/10 shadow-2xl;
 }
 
+/* TOC / layer list: intentionally more opaque for field readability */
+.toc-solid-panel {
+  background-color: rgba(2, 6, 23, 0.96) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 24px 90px rgba(0, 0, 0, 0.78) !important;
+}
+
+.light-theme .toc-solid-panel {
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
 .map-bg {
   background-image: url('/map.png');
   background-size: cover;

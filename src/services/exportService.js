@@ -35,6 +35,7 @@ function buildExportPayload({ features, layers, layerIdFilter, options, projectC
       filenameBase,
       extension,
       exportCrs,
+      layerName,
     };
   }
 
@@ -51,6 +52,7 @@ function buildExportPayload({ features, layers, layerIdFilter, options, projectC
     filenameBase,
     extension,
     exportCrs,
+    layerName,
   };
 }
 
@@ -59,13 +61,13 @@ async function saveExport({ payload, options }) {
   if (options.directoryHandle) {
     await writeTextToDirectory(options.directoryHandle, filename, content, mime);
     if (extension !== 'csv') await writeTextToDirectory(options.directoryHandle, `${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-    return;
+    return { path: `${options.directoryHandle.name || 'Cartella selezionata'}/${filename}`, mode: 'directory' };
   }
 
   if (options.fileHandle) {
     await writeTextToFileHandle(options.fileHandle, content, mime);
     if (extension !== 'csv') downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-    return;
+    return { path: options.fileHandle.name || filename, mode: 'file' };
   }
 
   if (options.useSaveFilePicker && canChooseOutputFile()) {
@@ -77,11 +79,12 @@ async function saveExport({ payload, options }) {
     const handle = await chooseWritableFile({ suggestedName: filename, description: 'GIS export', accept });
     await writeTextToFileHandle(handle, content, mime);
     if (extension !== 'csv') downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
-    return;
+    return { path: handle.name || filename, mode: 'file' };
   }
 
   downloadTextFile(filename, content, mime);
   if (extension !== 'csv') downloadTextFile(`${filenameBase}.prj.txt`, prjTextForCRS(exportCrs), 'text/plain');
+  return { path: `Browser download/${filename}`, mode: 'download' };
 }
 
 export async function exportFeatures(options = {}, context) {
@@ -93,19 +96,21 @@ export async function exportFeatures(options = {}, context) {
 
   if (features.length === 0) {
     alert('Nessuna feature da esportare.');
-    return;
+    return null;
   }
 
   const payload = buildExportPayload({ features, layers, layerIdFilter, options, projectCrs, getFeatureSourceCrs });
 
   try {
-    await saveExport({ payload, options });
+    const saveResult = await saveExport({ payload, options });
+    return { ...saveResult, filename: payload.filename, layerName: payload.layerName, exportCrs: payload.exportCrs };
   } catch (err) {
     if (err?.name !== 'AbortError') {
       console.error(err);
       alert('Export non riuscito. Uso download standard.');
       downloadTextFile(payload.filename, payload.content, payload.mime);
       if (payload.extension !== 'csv') downloadTextFile(`${payload.filenameBase}.prj.txt`, prjTextForCRS(payload.exportCrs), 'text/plain');
+      return { path: `Browser download/${payload.filename}`, mode: 'download', filename: payload.filename, layerName: payload.layerName, exportCrs: payload.exportCrs };
     }
   }
 }

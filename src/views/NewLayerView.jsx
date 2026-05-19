@@ -98,10 +98,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
     if (fileHandle) {
       return fileHandle.name || target.filename;
     }
-    if (dirLabel === tt('browserDownload')) {
-      return `${tt('browserDownload')}/${target.filename}`;
-    }
-    return `${tt('notSelected')} (${tt('defaultLabel')}: ${tt('browserDownload')}/${target.filename})`;
+    return `${tt('browserDownload')}/${target.filename}`;
   };
 
   const validate = () => {
@@ -141,8 +138,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       symbology: { mode: 'single', attribute: null, rules: [] }
     };
     const createInitialOutputFile = async () => {
-      const hasFallbackDownloadTarget = Boolean(dirLabel && !dirHandle && !fileHandle);
-      if (!dirHandle && !fileHandle && !hasFallbackDownloadTarget) return;
+      const hasFallbackDownloadTarget = !dirHandle && !fileHandle;
       const initialContent = format === 'csv'
         ? fields.filter(f => f.name.trim()).map(f => f.name.trim()).join(',') + '\n'
         : format === 'kml'
@@ -152,12 +148,17 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
       if (dirHandle) await writeTextToDirectory(dirHandle, target.filename, initialContent, target.mime);
       if (fileHandle) await writeTextToFileHandle(fileHandle, initialContent, target.mime);
       if (!dirHandle && !fileHandle && hasFallbackDownloadTarget) downloadTextFileFallback(target.filename, initialContent, target.mime);
+      return getVisibleOutputPath();
     };
 
-    createInitialOutputFile().catch(err => {
-      console.error(err);
-      alert(tt('layerCreatedFileWriteFailed'));
-    });
+    createInitialOutputFile()
+      .then((savedPath) => {
+        if (savedPath) alert(`${tt('layerSavedAt')} ${layer.name}: ${savedPath}`);
+      })
+      .catch(err => {
+        console.error(err);
+        alert(tt('layerCreatedFileWriteFailed'));
+      });
 
     setLayers(prev => [...prev, layer]);
     setSelectedLayerId(id);

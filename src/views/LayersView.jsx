@@ -239,7 +239,7 @@ export default function LayersView({
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('layerIndex')}</h2>
       </div>
 
-      <div className="flex-1 w-full glass bg-slate-950 light-theme:bg-white rounded-[2rem] sm:rounded-[2.5rem] border border-white/25 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+      <div className="flex-1 w-full glass toc-solid-panel bg-slate-950 rounded-[2rem] sm:rounded-[2.5rem] border border-white/25 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
         {/* Header */}
         <div className="px-4 sm:px-8 py-3 sm:py-4 border-b border-white/10 bg-slate-950/90 light-theme:bg-white flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('manageLayers')}</p>

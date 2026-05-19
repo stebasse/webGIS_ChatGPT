@@ -37,7 +37,7 @@ const TEXT = {
     resetDefaults: 'Ripristina predefiniti', theme: 'Tema', units: 'Unità', metric: 'Metrico', imperial: 'Imperiale', light: 'Chiaro', dark: 'Scuro',
     apply: 'Applica', add: 'Aggiungi', name: 'Nome', type: 'Tipo', fields: 'Campi', fieldName: 'Nome campo', fieldType: 'Tipo campo',
     point: 'Punto', line: 'Linea', polygon: 'Poligono', table: 'Tabella', string: 'Testo', integer: 'Intero', double: 'Decimale', date: 'Data', boolean: 'Booleano',
-    selectedFolder: 'Cartella selezionata', selectedFile: 'File selezionato', unknown: 'Sconosciuto', selectedCrs: 'CRS selezionato',
+    selectedFolder: 'Cartella selezionata', selectedFile: 'File selezionato', unknown: 'Sconosciuto', selectedCrs: 'CRS selezionato', layerSavedAt: 'Layer salvato al percorso',
   },
   en: {
     explore: 'Explore', geometry: 'Geometry', data: 'Data', settings: 'Settings',
@@ -72,7 +72,7 @@ const TEXT = {
     resetDefaults: 'Reset defaults', theme: 'Theme', units: 'Units', metric: 'Metric', imperial: 'Imperial', light: 'Light', dark: 'Dark',
     apply: 'Apply', add: 'Add', name: 'Name', type: 'Type', fields: 'Fields', fieldName: 'Field name', fieldType: 'Field type',
     point: 'Point', line: 'Line', polygon: 'Polygon', table: 'Table', string: 'String', integer: 'Integer', double: 'Double', date: 'Date', boolean: 'Boolean',
-    selectedFolder: 'Selected folder', selectedFile: 'Selected file', unknown: 'Unknown', selectedCrs: 'Selected CRS',
+    selectedFolder: 'Selected folder', selectedFile: 'Selected file', unknown: 'Unknown', selectedCrs: 'Selected CRS', layerSavedAt: 'Layer saved at path',
   },
 };
 
