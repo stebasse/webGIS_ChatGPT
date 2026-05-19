@@ -47,22 +47,22 @@ export function ProjectProvider({ children }) {
     layers: denormalized.layers,
     setLayers: updater => dispatch({
       type: 'project/replace-layers',
-      payload: typeof updater === 'function' ? updater(denormalized.layers) : updater,
+      payload: updater,
     }),
     collectedPoints: denormalized.features,
     setCollectedPoints: updater => dispatch({
       type: 'project/replace-features',
-      payload: typeof updater === 'function' ? updater(denormalized.features) : updater,
+      payload: updater,
     }),
     settings: denormalized.settings,
     setSettings: updater => dispatch({
       type: 'project/update-settings',
-      payload: typeof updater === 'function' ? updater(denormalized.settings) : updater,
+      payload: updater,
     }),
     selectedLayerId: denormalized.selectedLayerId,
     setSelectedLayerId: updater => dispatch({
       type: 'project/select-layer',
-      payload: typeof updater === 'function' ? updater(denormalized.selectedLayerId) : updater,
+      payload: updater,
     }),
     projectDocument: project,
   }), [denormalized, project]);

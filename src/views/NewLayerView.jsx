@@ -119,11 +119,13 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   const createLayer = () => {
     if (!validate()) return;
     const selectedFormat = FORMATS.find(f => f.id === format);
-    const id = Date.now();
+    const id = `layer_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const geometryType = newLayer.type || 'Point';
     const layer = {
       id,
       name: newLayer.name.trim(),
-      type: `Vector - ${newLayer.type}`,
+      type: `Vector - ${geometryType}`,
+      geometryType,
       colorHex: '#10b981',
       active: true,
       fields: fields.filter(f => f.name.trim()),
