@@ -121,19 +121,26 @@ export default function DataTabellaView({ collectedPoints, setCollectedPoints, l
     const selectedLayerName = layerId
       ? (layers.find(l => String(l.id) === String(layerId))?.name || exportOptions.filename || 'layer')
       : tt('allLayers');
-    const result = await exportData?.({
-      layerId,
-      filename: exportOptions.filename,
-      extension: exportOptions.extension,
-      crsMode: exportOptions.crsMode,
-      crs,
-      directoryHandle: exportDirectoryHandle,
-      fileHandle: exportFileHandle,
-      useSaveFilePicker: !exportDirectoryHandle && !exportFileHandle,
-    });
-    if (result) {
-      alert(`${tt('layerSavedAt')} ${result.layerName || selectedLayerName}: ${result.path || visiblePath}`);
-      setShowExportDialog(false);
+    try {
+      const result = await exportData?.({
+        layerId,
+        filename: exportOptions.filename,
+        extension: exportOptions.extension,
+        crsMode: exportOptions.crsMode,
+        crs,
+        directoryHandle: exportDirectoryHandle,
+        fileHandle: exportFileHandle,
+        // Dalla tabella attributi il comportamento predefinito deve essere immediato: download browser.
+        // Il file picker viene usato solo quando l'utente sceglie esplicitamente un file/cartella da "Choose Output".
+        useSaveFilePicker: false,
+      });
+      if (result) {
+        alert(`${tt('layerSavedAt')} ${result.layerName || selectedLayerName}: ${result.path || visiblePath}`);
+        setShowExportDialog(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(`Export non riuscito: ${err?.message || err}`);
     }
   };
 
