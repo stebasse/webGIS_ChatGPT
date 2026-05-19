@@ -34,16 +34,7 @@ import { buildDefaultProperties, coerceFieldValue, createDraftTableFeature, getD
 import { updateFeatureProperties as patchFeatureProperties } from './domain/gis/featureEngine';
 import { useDrawingLegacyState } from './state/drawing/DrawingContext.jsx';
 import { exportFeatures } from './services/exportService';
-
-
-const getLayerGeometryKind = (layer) => {
-  const raw = String(layer?.type || '').toLowerCase();
-  if (raw.includes('table') || raw.includes('tabella')) return 'Table';
-  if (raw.includes('point') || raw.includes('punto')) return 'Point';
-  if (raw.includes('line') || raw.includes('linea')) return 'Line';
-  if (raw.includes('polygon') || raw.includes('poligono')) return 'Polygon';
-  return null;
-};
+import { getLayerGeometryKind } from './services/layerService';
 
 const goToIcon = new L.DivIcon({
   className: '',

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BASEMAPS } from '../config/constants';
 import { FALLBACK_CRS } from '../services/crsService';
 import { t as translate } from '../i18n';
+import { getLayerGeometryKind } from '../services/layerService';
 
 export default function ExploreHUD({
   language = 'it',
