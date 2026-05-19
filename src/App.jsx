@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, CircleMarker, Marker, Polyline, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-rotate';
@@ -522,6 +522,18 @@ export default function App() {
             attribution={BASEMAPS[activeBasemap].attr}
             url={BASEMAPS[activeBasemap].url}
           />
+
+          {layers.filter(layer => layer.active && layer.format === 'wms' && layer.wms?.url && layer.wms?.layers).map(layer => (
+            <WMSTileLayer
+              key={`wms-${layer.id}`}
+              url={layer.wms.url}
+              layers={layer.wms.layers}
+              format={layer.wms.format || 'image/png'}
+              transparent={layer.wms.transparent !== false}
+              version={layer.wms.version || '1.3.0'}
+              opacity={0.82}
+            />
+          ))}
 
           <MapController
             setMap={setMap}
