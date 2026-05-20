@@ -96,15 +96,18 @@ export default function ExploreHUD({
       )}
 
       {/* ── Layer / CRS status badges ─────────────────────────────────────── */}
-      <div className="fixed top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-6 flex items-start justify-between gap-3 pointer-events-none z-[95]">
-        <div className="relative min-w-0 w-[48vw] sm:w-64 pointer-events-auto">
+      <div
+        className="webgis-status-row fixed left-3 right-3 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]"
+        style={{ top: 'var(--webgis-mobile-status-top)' }}
+      >
+        <div className="relative min-w-0 flex-1 sm:flex-none sm:w-64 pointer-events-auto">
           <button
             type="button"
             onClick={() => {
               if (statusMenusLocked) return;
               setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer');
             }}
-            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-2 py-0.5 rounded-xl sm:rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
             title={!hasSelectableLayers ? tt('addLayer') : statusMenusLocked ? tt('lockedMenus') : tt('activeLayer')}
           >
             {activeLayer ? (
@@ -166,7 +169,7 @@ export default function ExploreHUD({
                 return next;
               });
             }}
-            className={`glass bg-slate-950/85 backdrop-blur-xl w-9 h-9 rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
+            className={`glass bg-slate-950/85 backdrop-blur-xl w-7 h-7 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
             title={statusMenusLocked ? tt('unlockCrsLayerMenus') : tt('lockCrsLayerMenus')}
             aria-pressed={statusMenusLocked}
           >
@@ -177,11 +180,11 @@ export default function ExploreHUD({
             )}
           </button>
         </div>
-        <div className="relative w-[42vw] sm:w-52 pointer-events-auto">
+        <div className="relative min-w-0 flex-1 sm:flex-none sm:w-52 pointer-events-auto">
           <button
             type="button"
             onClick={() => { if (statusMenusLocked) return; setOpenStatusMenu(openStatusMenu === 'crs' ? null : 'crs'); }}
-            className={`w-full glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+            className={`w-full glass bg-slate-950/85 backdrop-blur-xl px-2 py-0.5 rounded-xl sm:rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
             title={statusMenusLocked ? tt('lockedMenus') : tt('changeCrs')}
           >
             <div className="flex items-center justify-end gap-2">
@@ -211,7 +214,10 @@ export default function ExploreHUD({
       </div>
 
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="absolute top-[calc(4.6rem+env(safe-area-inset-top,0px))] left-4 right-4 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-between sm:justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-full sm:max-w-max overflow-x-auto no-scrollbar">
+      <div
+        className="webgis-top-controls fixed left-3 right-3 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-1 rounded-[1rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar z-[94]"
+        style={{ top: 'var(--webgis-mobile-controls-top)' }}
+      >
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
@@ -344,7 +350,7 @@ export default function ExploreHUD({
       </div>
 
       {showGoTo && (
-        <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
+        <div className="absolute top-[calc(6.1rem+env(safe-area-inset-top,0px))] sm:top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-2 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-[9px] font-bold text-white uppercase tracking-widest">{tt('goToCoordinates')}</p>
@@ -362,7 +368,7 @@ export default function ExploreHUD({
       )}
 
       {showScaleInput && !scaleLocked && (
-        <div className="absolute top-[calc(5.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
+        <div className="absolute top-[calc(6.1rem+env(safe-area-inset-top,0px))] sm:top-[calc(5.0rem+env(safe-area-inset-top,0px))] left-2 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
           <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">{tt('lockScale')}</div>
           <div className="flex items-center gap-2">
             <input
@@ -386,7 +392,7 @@ export default function ExploreHUD({
 
       {/* ── Finish Drawing banner ────────────────────────────────────────── */}
       {drawingMode && (
-        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 max-w-[96vw] overflow-x-auto no-scrollbar">
+        <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto flex items-center gap-2 max-w-[96vw] overflow-x-auto no-scrollbar">
           <button
             onClick={() => setIsFreehandMode?.(prev => !prev)}
             className={`glass flex items-center gap-2 px-4 py-2.5 rounded-[2rem] border transition-all text-[9px] font-bold uppercase tracking-widest flex-shrink-0 ${isFreehandMode ? 'bg-primary/40 border-primary text-white shadow-[0_0_15px_rgba(0,191,255,0.4)]' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'}`}
@@ -423,7 +429,7 @@ export default function ExploreHUD({
 
       {/* ── Point tap placement control ───────────────────────────── */}
       {activeLayerIsPoint && !drawingMode && !measureMode && (
-        <div className="absolute bottom-24 sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto z-[90] flex items-center gap-2 max-w-[96vw] overflow-x-auto no-scrollbar">
+        <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-32 left-1/2 -translate-x-1/2 pointer-events-auto z-[90] flex items-center gap-2 max-w-[96vw] overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setPointTapMode?.(!pointTapMode)}
@@ -439,7 +445,7 @@ export default function ExploreHUD({
 
       {/* ── Point tap mode banner ───────────────────────────────────── */}
       {pointTapMode && !activeLayerIsPoint && !drawingMode && !measureMode && (
-        <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-auto">
+        <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-32 left-3 sm:left-6 pointer-events-auto">
           <div className="glass px-4 py-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-xl flex items-center gap-3">
             <div>
               <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">{tt('tapPoint')}</div>
@@ -454,7 +460,7 @@ export default function ExploreHUD({
 
       {/* ── Risultato misura ───────────────────────────────────── */}
       {measureMode && (
-        <div className="absolute bottom-24 sm:bottom-32 right-4 sm:right-6 pointer-events-auto">
+        <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-32 right-3 sm:right-6 pointer-events-auto">
           <div className="glass px-4 py-2.5 rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-xl flex items-center gap-3">
             <div>
               <div className="text-[8px] font-bold text-amber-300 uppercase tracking-widest">{measureMode}</div>
@@ -470,7 +476,7 @@ export default function ExploreHUD({
 
       {/* ── GPS coordinate bubble (when tracking) ───────────────────────── */}
       {gpsState.position && (
-        <div className="absolute bottom-24 sm:bottom-32 left-4 sm:left-6 pointer-events-none">
+        <div className="absolute bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-32 left-3 sm:left-6 pointer-events-none">
           <div className="glass px-2.5 py-1.5 rounded-xl text-[8px] font-mono text-emerald-400 shadow-xl border border-emerald-500/20">
             <div>{gpsCoordinateLabel || `${gpsState.position[1].toFixed(6)}, ${gpsState.position[0].toFixed(6)}`}</div>
             {gpsState.accuracy && <div className="text-white/30 text-[7px]">±{gpsState.accuracy.toFixed(1)} m · {projectCrs || 'EPSG:4326'}</div>}

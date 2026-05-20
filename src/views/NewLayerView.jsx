@@ -180,13 +180,13 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
   ];
 
   return (
-    <div className="w-full max-w-4xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
+    <div className="app-page animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 sm:mb-6 mt-2 sm:mt-4 w-full text-center">
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('createNewLayer')}</h2>
       </div>
 
-      <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8 space-y-8">
+      <div className="app-panel flex-1 w-full glass border border-white/10 overflow-hidden flex flex-col min-h-0">
+        <div className="flex-1 responsive-panel-scroll custom-scrollbar p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
 
           {/* Tipo geometria */}
           <section>
@@ -368,7 +368,7 @@ export default function NewLayerView({ newLayer, setNewLayer, setActiveTab, laye
 
       {showOutputTargetDialog && (
         <div className="fixed inset-0 z-[140] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass w-full max-w-xs rounded-[2rem] border border-white/15 shadow-2xl p-4 space-y-3">
+          <div className="glass responsive-modal-card rounded-[2rem] border border-white/15 shadow-2xl p-4 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-white">{tt('outputFolder')}</h3>

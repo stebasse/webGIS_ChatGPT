@@ -10,7 +10,7 @@ const BottomNav = ({ activeTab, setActiveTab, onExport, selectedLayer, onAddFeat
   ];
 
   return (
-    <nav className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 left-1/2 -translate-x-1/2 glass rounded-[1.5rem] sm:rounded-[2rem] px-1.5 sm:px-2 py-1.5 sm:py-2 flex gap-0.5 sm:gap-1 z-50 max-w-[calc(100vw-2rem)]">
+    <nav className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 left-1/2 -translate-x-1/2 glass rounded-[1.5rem] sm:rounded-[2rem] px-1.5 sm:px-2 py-1.5 sm:py-2 flex gap-0.5 sm:gap-1 z-50 max-w-[calc(100vw-1rem)] overflow-x-auto no-scrollbar">
       {tabs.map(tab => (
         <button
           key={tab.id}

@@ -235,3 +235,188 @@
   border-color: rgba(15, 23, 42, 0.18) !important;
   text-shadow: none;
 }
+
+
+/* Responsive production layout helpers */
+:root {
+  --app-shell-pad-x: clamp(0.75rem, 2vw, 1.5rem);
+  --app-shell-pad-y: clamp(0.75rem, 2vh, 1.5rem);
+  --app-bottom-clearance: calc(6.5rem + env(safe-area-inset-bottom, 0px));
+  --app-panel-radius: clamp(1.25rem, 2vw, 2.5rem);
+}
+
+.app-screen-router {
+  padding: var(--app-shell-pad-y) var(--app-shell-pad-x) var(--app-bottom-clearance);
+}
+
+.app-page {
+  width: min(100%, 72rem);
+  height: 100%;
+  margin-inline: auto;
+  padding-inline: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.app-page-narrow { width: min(100%, 48rem); }
+.app-page-wide { width: min(100%, 88rem); }
+
+.app-panel {
+  border-radius: var(--app-panel-radius);
+  min-height: 0;
+}
+
+.responsive-panel-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.responsive-actions-row > * {
+  min-width: max-content;
+}
+
+.responsive-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: 1rem;
+}
+
+.responsive-modal-card {
+  width: min(100%, 32rem);
+  max-height: min(90dvh, 42rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.responsive-table-scroll {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.responsive-table-scroll table {
+  min-width: 42rem;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --app-shell-pad-x: 0.75rem;
+    --app-shell-pad-y: 0.75rem;
+    --app-bottom-clearance: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-screen-router {
+    padding-top: calc(0.15rem + env(safe-area-inset-top, 0px));
+  }
+
+  .app-page {
+    width: 100%;
+  }
+
+  .app-panel {
+    border-radius: 1.35rem;
+  }
+
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-page {
+    justify-content: center;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.responsive-table-scroll > .grid {
+  min-width: 42rem;
+}
+
+@media (max-width: 640px) {
+  .responsive-table-scroll > .grid {
+    min-width: 38rem;
+  }
+}
+
+
+
+/* Mobile map HUD offsets.
+   The phone status bar (time/battery) is outside the normal web viewport,
+   while env(safe-area-inset-top) protects notches/dynamic islands in PWA/fullscreen.
+   Keep Active Layer + CRS immediately below it, then place the top toolbar
+   directly underneath the compact status row. */
+:root {
+  --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
+  --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 4.15rem);
+}
+
+@media (max-width: 639px) {
+  :root {
+    /* MOBILE: place the Active layer / Project CRS block immediately
+       under the phone safe area, then put the toolbar directly below it. */
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0px);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 30px);
+  }
+
+  .webgis-status-row {
+    position: fixed !important;
+    left: 4px !important;
+    right: 4px !important;
+    top: var(--webgis-mobile-status-top) !important;
+    gap: 4px !important;
+    align-items: flex-start !important;
+    z-index: 1200 !important;
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  .webgis-status-row > div {
+    min-width: 0 !important;
+  }
+
+  .webgis-status-row button {
+    min-height: 24px !important;
+    height: 24px !important;
+    padding-top: 1px !important;
+    padding-bottom: 1px !important;
+    border-radius: 10px !important;
+  }
+
+  .webgis-top-controls {
+    position: fixed !important;
+    left: 4px !important;
+    right: 4px !important;
+    top: var(--webgis-mobile-controls-top) !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 2px 6px !important;
+    border-radius: 12px !important;
+    gap: 4px !important;
+    z-index: 1190 !important;
+    transform: translate3d(0, 0, 0) !important;
+  }
+
+  .webgis-top-controls button,
+  .webgis-top-controls select {
+    min-height: 24px !important;
+  }
+}
+
+@media (min-width: 640px) {
+  :root {
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 5.45rem);
+  }
+}

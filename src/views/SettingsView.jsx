@@ -90,13 +90,13 @@ export default function ImpostazioniView({ draftSettings, draftImpostazioni, set
   };
 
   return (
-    <div className="w-full max-w-4xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
+    <div className="app-page animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 sm:mb-6 mt-2 sm:mt-4 w-full text-center">
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('settings')}</h2>
       </div>
 
-      <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-10">
+      <div className="app-panel flex-1 w-full glass border border-white/10 overflow-hidden flex flex-col min-h-0">
+        <div className="flex-1 responsive-panel-scroll custom-scrollbar p-4 sm:p-6 lg:p-8 space-y-8 lg:space-y-10">
 
           <section>
             <SectionHeader icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />} title={tt('coordinateReference')} />

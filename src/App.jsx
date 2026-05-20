@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Marker, Polyline, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, WMSTileLayer, CircleMarker, Marker, Polyline, Polygon } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-rotate';
@@ -523,6 +523,18 @@ export default function App() {
             url={BASEMAPS[activeBasemap].url}
           />
 
+          {layers.filter(layer => layer.active && layer.format === 'wms' && layer.wms?.url && layer.wms?.layers).map(layer => (
+            <WMSTileLayer
+              key={`wms-${layer.id}`}
+              url={layer.wms.url}
+              layers={layer.wms.layers}
+              format={layer.wms.format || 'image/png'}
+              transparent={layer.wms.transparent !== false}
+              version={layer.wms.version || '1.3.0'}
+              opacity={0.82}
+            />
+          ))}
+
           <MapController
             setMap={setMap}
             gpsPosition={gpsState.position}
@@ -610,7 +622,7 @@ export default function App() {
       </div>
 
       {/* SCREEN ROUTER */}
-      <div className="relative h-full w-full z-10 p-0 sm:p-6 pb-24 pointer-events-none">
+      <div className="app-screen-router relative h-full w-full z-10 pointer-events-none">
 
         {/* Global Center Crosshair (Fixed for accuracy) */}
         {activeTab === 'explore' && (
@@ -707,7 +719,7 @@ export default function App() {
         {/* FEATURE ATTRIBUTE POPUP */}
         {popupFeature && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={() => closePopup({ discardDraft: true })}>
-            <div className="glass w-full max-w-sm rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="glass responsive-modal-card rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/5">
                 <div>
                   <h3 className="text-xs font-bold text-white uppercase tracking-widest">{t(language, 'featureProperties')}</h3>
@@ -744,7 +756,7 @@ export default function App() {
                   </button>
                 </div>
               </div>
-              <div className="p-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+              <div className="p-4 sm:p-6 responsive-panel-scroll custom-scrollbar">
                 {showAddFieldForm && (
                   <div className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-4 space-y-3">
                     <div className="text-[9px] font-bold text-white/50 uppercase tracking-widest">{t(language, 'fieldName')}</div>
@@ -814,7 +826,7 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
-              <div className="px-6 py-4 border-t border-white/10 bg-black/20 flex justify-end gap-3">
+              <div className="px-4 sm:px-6 py-4 border-t border-white/10 bg-black/20 responsive-actions-row justify-end">
                 {isEditingPopup ? (
                   <button
                     onClick={savePopup}
@@ -845,7 +857,7 @@ export default function App() {
       </button>
 
       {isTocSidebarOpen && activeTab === 'explore' && (
-        <div className="fixed left-0 top-0 bottom-0 z-[990] pointer-events-auto w-[min(92vw,420px)] p-3 sm:p-4 pr-2 animate-in slide-in-from-left-4 fade-in duration-300">
+        <div className="fixed left-0 top-0 bottom-0 z-[990] pointer-events-auto w-[min(96vw,440px)] p-2 sm:p-4 animate-in slide-in-from-left-4 fade-in duration-300">
           <div className="relative h-full w-full">
             <LayersView
               language={language}
