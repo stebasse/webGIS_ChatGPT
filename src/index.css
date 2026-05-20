@@ -352,37 +352,25 @@
 }
 
 
-/* Mobile map HUD: keep Layer/CRS and the main top bar close to the phone status bar.
-   These explicit classes avoid Tailwind arbitrary env() parsing differences on mobile builds. */
-.webgis-status-row {
-  top: calc(env(safe-area-inset-top, 0px) + 1rem);
-}
 
-.webgis-top-controls {
-  top: calc(env(safe-area-inset-top, 0px) + 5.45rem);
-}
-
-@media (max-width: 639px) {
-  .webgis-status-row {
-    top: calc(env(safe-area-inset-top, 0px) + 0.85rem);
-  }
-
-  .webgis-status-row .glass,
-  .webgis-top-controls.glass {
-    background-color: rgba(15, 23, 42, 0.82);
-  }
-
-  .webgis-top-controls {
-    top: calc(env(safe-area-inset-top, 0px) + 5.05rem);
-  }
+/* Explicit viewport-level offsets for the mobile map HUD.
+   Values are intentionally tiny: the browser/OS status bar is outside the web viewport,
+   so these place the controls immediately below it instead of near the screen center. */
+:root {
+  --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
+  --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 4.15rem);
 }
 
 @media (min-width: 640px) {
-  .webgis-status-row {
-    top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+  :root {
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 1rem);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 5.45rem);
   }
+}
 
-  .webgis-top-controls {
-    top: calc(env(safe-area-inset-top, 0px) + 4.5rem);
+@media (max-width: 639px) and (max-height: 760px) {
+  :root {
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.2rem);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 3.85rem);
   }
 }

@@ -96,7 +96,10 @@ export default function ExploreHUD({
       )}
 
       {/* ── Layer / CRS status badges ─────────────────────────────────────── */}
-      <div className="webgis-status-row fixed left-3 right-3 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]">
+      <div
+        className="webgis-status-row fixed left-3 right-3 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]"
+        style={{ top: 'var(--webgis-mobile-status-top)' }}
+      >
         <div className="relative min-w-0 flex-1 sm:flex-none sm:w-64 pointer-events-auto">
           <button
             type="button"
@@ -211,7 +214,10 @@ export default function ExploreHUD({
       </div>
 
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="webgis-top-controls fixed left-3 right-3 sm:left-6 sm:right-auto glass px-3 sm:px-5 py-2 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar z-[94]">
+      <div
+        className="webgis-top-controls fixed left-3 right-3 sm:left-6 sm:right-auto glass px-3 sm:px-5 py-2 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar z-[94]"
+        style={{ top: 'var(--webgis-mobile-controls-top)' }}
+      >
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
