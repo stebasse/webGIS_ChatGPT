@@ -312,7 +312,7 @@
   }
 
   .app-screen-router {
-    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    padding-top: calc(0.15rem + env(safe-area-inset-top, 0px));
   }
 
   .app-page {

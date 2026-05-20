@@ -96,7 +96,7 @@ export default function ExploreHUD({
       )}
 
       {/* ── Layer / CRS status badges ─────────────────────────────────────── */}
-      <div className="fixed top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-2 right-2 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]">
+      <div className="fixed top-[calc(0.05rem+env(safe-area-inset-top,0px))] sm:top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-1.5 right-1.5 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]">
         <div className="relative min-w-0 flex-1 sm:flex-none sm:w-64 pointer-events-auto">
           <button
             type="button"
@@ -211,7 +211,7 @@ export default function ExploreHUD({
       </div>
 
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="absolute top-[calc(4.5rem+env(safe-area-inset-top,0px))] left-2 right-2 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar">
+      <div className="absolute top-[calc(3.05rem+env(safe-area-inset-top,0px))] sm:top-[calc(4.5rem+env(safe-area-inset-top,0px))] left-1.5 right-1.5 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-1.5 sm:py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar">
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
@@ -344,7 +344,7 @@ export default function ExploreHUD({
       </div>
 
       {showGoTo && (
-        <div className="absolute top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
+        <div className="absolute top-[calc(6.1rem+env(safe-area-inset-top,0px))] sm:top-[calc(4.0rem+env(safe-area-inset-top,0px))] left-2 sm:left-6 pointer-events-auto glass p-4 rounded-2xl border border-white/15 shadow-2xl w-[min(92vw,320px)] space-y-3 z-[100]">
           <div className="flex justify-between items-center">
             <div>
               <p className="text-[9px] font-bold text-white uppercase tracking-widest">{tt('goToCoordinates')}</p>
@@ -362,7 +362,7 @@ export default function ExploreHUD({
       )}
 
       {showScaleInput && !scaleLocked && (
-        <div className="absolute top-[calc(5.0rem+env(safe-area-inset-top,0px))] left-4 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
+        <div className="absolute top-[calc(6.1rem+env(safe-area-inset-top,0px))] sm:top-[calc(5.0rem+env(safe-area-inset-top,0px))] left-2 sm:left-6 z-30 pointer-events-auto glass rounded-2xl border border-white/15 shadow-2xl p-3 w-[min(92vw,280px)]">
           <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 mb-2">{tt('lockScale')}</div>
           <div className="flex items-center gap-2">
             <input
