@@ -353,12 +353,20 @@
 
 
 
-/* Explicit viewport-level offsets for the mobile map HUD.
-   Values are intentionally tiny: the browser/OS status bar is outside the web viewport,
-   so these place the controls immediately below it instead of near the screen center. */
+/* Explicit viewport-level offsets for the map HUD.
+   On phones the browser/OS status bar is outside the web viewport, while
+   env(safe-area-inset-top) represents any notch/dynamic-island inset. Keep
+   the Active Layer / CRS row and the top controls immediately under it. */
 :root {
   --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
   --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 4.15rem);
+}
+
+@media (max-width: 639px) {
+  :root {
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.08rem);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 2.55rem);
+  }
 }
 
 @media (min-width: 640px) {
@@ -370,7 +378,7 @@
 
 @media (max-width: 639px) and (max-height: 760px) {
   :root {
-    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.2rem);
-    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 3.85rem);
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.02rem);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 2.42rem);
   }
 }
