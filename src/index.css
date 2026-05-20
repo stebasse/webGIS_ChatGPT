@@ -353,10 +353,11 @@
 
 
 
-/* Explicit viewport-level offsets for the map HUD.
-   On phones the browser/OS status bar is outside the web viewport, while
-   env(safe-area-inset-top) represents any notch/dynamic-island inset. Keep
-   the Active Layer / CRS row and the top controls immediately under it. */
+/* Mobile map HUD offsets.
+   The phone status bar (time/battery) is outside the normal web viewport,
+   while env(safe-area-inset-top) protects notches/dynamic islands in PWA/fullscreen.
+   Keep Active Layer + CRS immediately below it, then place the top toolbar
+   directly underneath the compact status row. */
 :root {
   --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.35rem);
   --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 4.15rem);
@@ -364,8 +365,24 @@
 
 @media (max-width: 639px) {
   :root {
-    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.08rem);
-    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 2.55rem);
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 2px);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 38px);
+  }
+
+  .webgis-status-row {
+    left: 0.35rem !important;
+    right: 0.35rem !important;
+    top: var(--webgis-mobile-status-top) !important;
+    gap: 0.25rem !important;
+  }
+
+  .webgis-top-controls {
+    left: 0.35rem !important;
+    right: 0.35rem !important;
+    top: var(--webgis-mobile-controls-top) !important;
+    padding: 0.3rem 0.45rem !important;
+    border-radius: 1rem !important;
+    gap: 0.35rem !important;
   }
 }
 
@@ -378,7 +395,7 @@
 
 @media (max-width: 639px) and (max-height: 760px) {
   :root {
-    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0.02rem);
-    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 2.42rem);
+    --webgis-mobile-status-top: calc(env(safe-area-inset-top, 0px) + 0px);
+    --webgis-mobile-controls-top: calc(env(safe-area-inset-top, 0px) + 35px);
   }
 }
