@@ -47,7 +47,7 @@ function SimbologiaPanel({ layer, onUpdate, onClose, language = 'it' }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div 
-        className="glass responsive-modal-card rounded-[2rem] border border-white/20 shadow-2xl"
+        className="glass w-full max-w-lg rounded-[2rem] border border-white/20 shadow-2xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}
       >
         <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center">
@@ -225,7 +225,7 @@ export default function LayersView({
   };
 
   return (
-    <div className="app-page animate-in fade-in duration-500 pointer-events-auto">
+    <div className="w-full max-w-4xl h-full mx-auto flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       {symbologyLayer && (
         <SimbologiaPanel 
           language={language}
@@ -239,7 +239,7 @@ export default function LayersView({
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('layerIndex')}</h2>
       </div>
 
-      <div className="app-panel flex-1 w-full glass toc-solid-panel bg-slate-950 border border-white/25 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
+      <div className="flex-1 w-full glass toc-solid-panel bg-slate-950 rounded-[2rem] sm:rounded-[2.5rem] border border-white/25 overflow-hidden flex flex-col min-h-0 shadow-[0_24px_80px_rgba(0,0,0,0.65)]">
         {/* Header */}
         <div className="px-4 sm:px-8 py-3 sm:py-4 border-b border-white/10 bg-slate-950/90 light-theme:bg-white flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-start sm:items-center">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{tt('manageLayers')}</p>
@@ -254,7 +254,7 @@ export default function LayersView({
             <svg className="w-3 h-3 absolute right-3 top-2.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           </div>
         </div>
-        <div className="flex-1 responsive-panel-scroll custom-scrollbar p-3 sm:p-6 lg:p-8">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8">
           {layers.filter(l => l.name.toLowerCase().includes(layerFilter.toLowerCase())).length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-600 py-16">
               <svg className="w-14 h-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
