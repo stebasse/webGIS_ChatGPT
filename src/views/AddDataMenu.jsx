@@ -2,7 +2,7 @@ import { t } from '../i18n';
 
 export default function AddDataMenu({ setActiveTab, language = 'it' }) {
   return (
-    <div className="app-page app-page-narrow justify-center animate-in fade-in duration-500 pointer-events-auto">
+    <div className="w-full max-w-4xl h-full flex flex-col items-center justify-center animate-in fade-in duration-500 pointer-events-auto pb-20">
       <h2 className="text-3xl font-bold text-white uppercase tracking-[0.3em] mb-16">{t(language, 'addDataToProject')}</h2>
       <div className="flex gap-10">
          <button 

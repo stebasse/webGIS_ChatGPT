@@ -149,12 +149,12 @@ export default function DataTabellaView({ collectedPoints, setCollectedPoints, l
   const selectedFeature = selectedFeatureId ? collectedPoints.find(f => f.properties.id === selectedFeatureId) : null;
 
   return (
-    <div className="app-page app-page-wide animate-in fade-in duration-500 pointer-events-auto">
+    <div className="w-full max-w-5xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 mt-2 w-full text-center">
         <h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('attributeTable')}</h2>
       </div>
 
-      <div className="app-panel flex-1 w-full glass border border-white/10 overflow-hidden flex flex-col min-h-0">
+      <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-8 py-4 border-b border-white/5 bg-white/5">
           <div className="flex items-center gap-3">
             <select
@@ -186,7 +186,7 @@ export default function DataTabellaView({ collectedPoints, setCollectedPoints, l
           <div className="w-16 text-right">{tt('actions')}</div>
         </div>
 
-        <div className="flex-1 responsive-table-scroll custom-scrollbar">
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
           {displayedFeatures.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center gap-4 text-slate-600 p-8">
               <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -226,7 +226,7 @@ export default function DataTabellaView({ collectedPoints, setCollectedPoints, l
 
       {showExportDialog && (
         <div className="fixed inset-0 z-[120] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass responsive-modal-card rounded-[2rem] border border-white/15 shadow-2xl p-5 space-y-4">
+          <div className="glass w-full max-w-sm rounded-[2rem] border border-white/15 shadow-2xl p-5 space-y-4">
             <div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-bold uppercase tracking-[0.2em] text-white">{tt('export')}</h3><p className="text-[10px] text-slate-500 mt-1">{tt('exportHelp')}</p></div><button onClick={() => setShowExportDialog(false)} className="w-8 h-8 rounded-full hover:bg-white/10 text-slate-400">×</button></div>
             <label className="block space-y-1"><span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">{tt('fileName')}</span><input value={exportOptions.filename} onChange={e => setExportOptions(o => ({ ...o, filename: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary" /></label>
             <label className="block space-y-1"><span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">{tt('extension')}</span><select value={exportOptions.extension} onChange={e => setExportOptions(o => ({ ...o, extension: e.target.value }))} className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-primary"><option value="geojson">GeoJSON</option><option value="json">JSON</option><option value="csv">CSV</option></select></label>

@@ -2,7 +2,7 @@ import React from 'react';
 
 const Sidebar = ({ title, children, isOpen, onClose }) => {
   return (
-    <aside className={`fixed top-0 right-0 h-full w-[min(100vw,26rem)] glass border-l border-white/5 p-4 sm:p-6 lg:p-8 transition-transform duration-500 ease-in-out z-40 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+    <aside className={`fixed top-0 right-0 h-full w-96 glass border-l border-white/5 p-8 transition-transform duration-500 ease-in-out z-40 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="flex justify-between items-center mb-10">
         <h2 className="text-xl font-bold tracking-tight text-white uppercase tracking-widest">{title}</h2>
         <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white">
@@ -11,7 +11,7 @@ const Sidebar = ({ title, children, isOpen, onClose }) => {
           </svg>
         </button>
       </div>
-      <div className="responsive-panel-scroll h-[calc(100%-80px)] space-y-6 lg:space-y-8 pr-1 sm:pr-2">
+      <div className="overflow-y-auto h-[calc(100%-80px)] space-y-8 pr-2">
         {children}
       </div>
     </aside>
