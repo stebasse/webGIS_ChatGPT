@@ -350,3 +350,39 @@
     min-width: 38rem;
   }
 }
+
+
+/* Mobile map HUD: keep Layer/CRS and the main top bar close to the phone status bar.
+   These explicit classes avoid Tailwind arbitrary env() parsing differences on mobile builds. */
+.webgis-status-row {
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
+}
+
+.webgis-top-controls {
+  top: calc(env(safe-area-inset-top, 0px) + 5.45rem);
+}
+
+@media (max-width: 639px) {
+  .webgis-status-row {
+    top: calc(env(safe-area-inset-top, 0px) + 0.85rem);
+  }
+
+  .webgis-status-row .glass,
+  .webgis-top-controls.glass {
+    background-color: rgba(15, 23, 42, 0.82);
+  }
+
+  .webgis-top-controls {
+    top: calc(env(safe-area-inset-top, 0px) + 5.05rem);
+  }
+}
+
+@media (min-width: 640px) {
+  .webgis-status-row {
+    top: calc(env(safe-area-inset-top, 0px) + 0.45rem);
+  }
+
+  .webgis-top-controls {
+    top: calc(env(safe-area-inset-top, 0px) + 4.5rem);
+  }
+}

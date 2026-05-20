@@ -96,7 +96,7 @@ export default function ExploreHUD({
       )}
 
       {/* ── Layer / CRS status badges ─────────────────────────────────────── */}
-      <div className="fixed top-[calc(0.05rem+env(safe-area-inset-top,0px))] sm:top-[calc(0.45rem+env(safe-area-inset-top,0px))] left-1.5 right-1.5 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]">
+      <div className="webgis-status-row fixed left-3 right-3 sm:left-6 sm:right-6 flex items-start justify-between gap-2 sm:gap-3 pointer-events-none z-[95]">
         <div className="relative min-w-0 flex-1 sm:flex-none sm:w-64 pointer-events-auto">
           <button
             type="button"
@@ -104,7 +104,7 @@ export default function ExploreHUD({
               if (statusMenusLocked) return;
               setOpenStatusMenu(openStatusMenu === 'layer' ? null : 'layer');
             }}
-            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+            className={`w-full text-left glass bg-slate-950/85 backdrop-blur-xl px-2.5 py-1 rounded-xl sm:rounded-2xl border flex items-center gap-2 shadow-2xl transition-colors ${activeLayer ? 'border-white/20 hover:border-primary/60' : 'border-amber-500/40 hover:border-amber-400'} ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
             title={!hasSelectableLayers ? tt('addLayer') : statusMenusLocked ? tt('lockedMenus') : tt('activeLayer')}
           >
             {activeLayer ? (
@@ -166,7 +166,7 @@ export default function ExploreHUD({
                 return next;
               });
             }}
-            className={`glass bg-slate-950/85 backdrop-blur-xl w-9 h-9 rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
+            className={`glass bg-slate-950/85 backdrop-blur-xl w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl border flex items-center justify-center shadow-2xl transition-colors ${statusMenusLocked ? 'border-primary/60 text-primary' : 'border-white/20 text-slate-400 hover:text-white hover:border-primary/60'}`}
             title={statusMenusLocked ? tt('unlockCrsLayerMenus') : tt('lockCrsLayerMenus')}
             aria-pressed={statusMenusLocked}
           >
@@ -181,7 +181,7 @@ export default function ExploreHUD({
           <button
             type="button"
             onClick={() => { if (statusMenusLocked) return; setOpenStatusMenu(openStatusMenu === 'crs' ? null : 'crs'); }}
-            className={`w-full glass bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
+            className={`w-full glass bg-slate-950/85 backdrop-blur-xl px-2.5 py-1 rounded-xl sm:rounded-2xl border border-white/20 text-right shadow-2xl hover:border-primary/60 transition-colors ${statusMenusLocked ? 'opacity-80 cursor-not-allowed' : ''}`}
             title={statusMenusLocked ? tt('lockedMenus') : tt('changeCrs')}
           >
             <div className="flex items-center justify-end gap-2">
@@ -211,7 +211,7 @@ export default function ExploreHUD({
       </div>
 
       {/* ── Top control panel ────────────────────────────────────────────── */}
-      <div className="absolute top-[calc(3.05rem+env(safe-area-inset-top,0px))] sm:top-[calc(4.5rem+env(safe-area-inset-top,0px))] left-1.5 right-1.5 sm:left-6 sm:right-auto glass px-2 sm:px-5 py-1.5 sm:py-2 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar">
+      <div className="webgis-top-controls fixed left-3 right-3 sm:left-6 sm:right-auto glass px-3 sm:px-5 py-2 rounded-[1.25rem] sm:rounded-[2rem] flex items-center justify-start gap-2 sm:gap-4 border border-white/20 shadow-2xl pointer-events-auto max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-3rem)] lg:max-w-max overflow-x-auto no-scrollbar z-[94]">
 
         {/* Basemap selector */}
         <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
