@@ -333,9 +333,9 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
   const statusColors = { error: 'text-red-400 bg-red-400/10 border-red-400/20', warn: 'text-amber-400 bg-amber-400/10 border-amber-400/20', success: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' };
 
   return (
-    <div className="w-full max-w-3xl h-full flex flex-col items-center animate-in fade-in duration-500 pointer-events-auto">
+    <div className="app-page app-page-narrow animate-in fade-in duration-500 pointer-events-auto">
       <div className="mb-4 sm:mb-6 mt-2 sm:mt-4 w-full text-center"><h2 className="text-xl sm:text-2xl font-bold text-white uppercase tracking-[0.25em]">{tt('importFile')}</h2></div>
-      <div className="flex-1 w-full glass rounded-[2rem] sm:rounded-[2.5rem] border border-white/10 overflow-hidden flex flex-col min-h-0">
+      <div className="app-panel flex-1 w-full glass border border-white/10 overflow-hidden flex flex-col min-h-0">
         <div className="p-6 sm:p-10 flex flex-col items-center gap-6 border-b border-white/5">
           <div className="w-full max-w-md grid grid-cols-3 gap-2 p-1 rounded-2xl bg-black/20 border border-white/10">
             {[
@@ -395,7 +395,7 @@ export default function UploadView({ language = 'it', layers, setLayers, setColl
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-8 space-y-5">
+        <div className="flex-1 responsive-panel-scroll custom-scrollbar p-4 sm:p-6 lg:p-8 space-y-5">
           {importKind === 'vector' && (
             <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
               <p className="text-[10px] font-bold text-white uppercase tracking-widest">{tt('layerCrs')}</p>
